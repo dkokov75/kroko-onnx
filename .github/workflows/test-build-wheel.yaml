@@ -138,8 +138,31 @@ jobs:
           pattern: wheel-*
           merge-multiple: true
 
+      - name: Patch Wheels (Remove large CUDA libs)
+        shell: bash
+        run: |
+          pip install wheel
+          
+          mkdir -p patched_dist
+          
+          for whl in dist/*.whl; do
+            echo "Processing $whl..."
+            
+            mkdir -p tmp_wheel
+            unzip -q "$whl" -d tmp_wheel
+            
+            rm -f tmp_wheel/sherpa_onnx/lib/libonnxruntime_providers_cuda.so
+            
+            python -m wheel pack tmp_wheel -d patched_dist/
+            
+            rm -rf tmp_wheel
+
+          done
+          rm -rf dist
+          mv patched_dist dist
+
       - name: List contents
-        run: ls -R dist
+        run: ls -lsh dist
 
       - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
