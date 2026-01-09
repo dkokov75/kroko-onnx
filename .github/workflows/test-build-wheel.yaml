@@ -101,14 +101,20 @@ jobs:
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Install Ninja
+        run: pip install ninja
+
       - name: Build
         shell: bash
         run: |
           export CMAKE_CXX_COMPILER_LAUNCHER=ccache
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+          export CMAKE_ARGS="-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE=."
           cmake --version
 
           export SHERPA_ONNX_MAKE_ARGS="VERBOSE=1 -j2"
+
+          export CMAKE_GENERATOR="Ninja"
 
           python3 setup.py bdist_wheel
           ls -lh dist
