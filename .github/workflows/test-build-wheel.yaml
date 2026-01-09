@@ -93,6 +93,14 @@ jobs:
           python3 -m pip install --upgrade pip
           python3 -m pip install wheel twine setuptools
 
+      - name: Add MSBuild to PATH
+        if: runner.os == 'Windows'
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup MSVC devcmd
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Build
         shell: bash
         run: |
