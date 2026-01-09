@@ -38,7 +38,7 @@ def get_package_version():
     return latest_version
 
 
-package_name = "kroko-onnx"
+package_name = "kroko-onnx-2"
 
 with open("sherpa-onnx/python/sherpa_onnx/__init__.py", "a") as f:
     f.write(f"__version__ = '{get_package_version()}'\n")
