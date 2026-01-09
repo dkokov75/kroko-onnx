@@ -1,0 +1,48 @@
+name: Windows Build Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build_windows:
+    name: Windows Build (Py ${{ matrix.python-version }})
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enable Long Paths
+        run: git config --system core.longpaths true
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Build Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ninja wheel setuptools
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build Wheel
+        shell: bash
+        run: |
+          export CMAKE_GENERATOR="Ninja"
+          export PYTHON_EXECUTABLE=$(which python)
+          
+          python setup.py bdist_wheel
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-wheel-${{ matrix.python-version }}
+          path: dist/*.whl
