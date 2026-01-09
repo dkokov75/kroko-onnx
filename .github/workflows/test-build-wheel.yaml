@@ -124,4 +124,21 @@ jobs:
         shell: bash
         run: |
           pip install --verbose ./dist/*.whl
+          
+  upload_test_pypi:
+    needs: [build_wheels]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
 
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: cibw-wheels-*
+          merge-multiple: true
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
