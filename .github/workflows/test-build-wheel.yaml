@@ -126,7 +126,7 @@ jobs:
           pip install --verbose ./dist/*.whl
           
   upload_test_pypi:
-    needs: [build_wheels]
+    needs: [test-build-wheel]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
