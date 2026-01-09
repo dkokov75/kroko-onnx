@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.12"]
+        python-version: ["3.12"]
 
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +38,13 @@ jobs:
         run: |
           export CMAKE_GENERATOR="Ninja"
           export PYTHON_EXECUTABLE=$(which python)
+
+          export CMAKE_ARGS="-DSHERPA_ONNX_ENABLE_PYTHON=ON \
+                            -DCMAKE_Fortran_COMPILER=NOTFOUND \
+                            -DPYTHON_EXECUTABLE=$(which python) \
+                            -DBUILD_SHARED_LIBS=OFF"
+          
+          export PATH=$(echo $PATH | sed -e 's/C:\/mingw64\/bin//g')
           
           python setup.py bdist_wheel
           
