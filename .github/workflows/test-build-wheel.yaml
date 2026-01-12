@@ -146,7 +146,7 @@ jobs:
           pattern: wheel-*
           merge-multiple: true
 
-      - name: Patch Wheels (Remove large CUDA libs)
+      - name: Patch Wheels
         shell: bash
         run: |
           pip install wheel
@@ -158,8 +158,6 @@ jobs:
             
             mkdir -p tmp_wheel
             unzip -q "$whl" -d tmp_wheel
-            
-            rm -f tmp_wheel/sherpa_onnx/lib/libonnxruntime_providers_cuda.so
             
             python -m wheel pack tmp_wheel -d patched_dist/
             
