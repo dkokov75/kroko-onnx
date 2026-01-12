@@ -1,0 +1,61 @@
+name: build-wheels-win64
+
+on:
+  push:
+    branches:
+      - wheel
+  workflow_dispatch:
+
+env:
+  SHERPA_ONNX_IS_IN_GITHUB_ACTIONS: 1
+  CMAKE_VERBOSE_MAKEFILE: ON
+
+concurrency:
+  group: build-wheels-win64-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_wheels_win64:
+    name: win64-py${{ matrix.python-version }}
+    runs-on: windows-2022
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        # 3.13 е умишлено махнат – все още нестабилен за native extensions
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Ако new-release.sh е нужен, по-добре го пускай само на Linux
+      # - name: Update version
+      #   shell: bash
+      #   run: ./new-release.sh
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Upgrade pip & build tools
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+
+      - name: Build wheel
+        run: |
+          python setup.py bdist_wheel
+
+      - name: List built wheels
+        run: |
+          dir dist
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-win64-py${{ matrix.python-version }}
+          path: dist/*.whl
