@@ -17,6 +17,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <thread>
 
 #include "sherpa-onnx/csrc/file-utils.h"
 #include "sherpa-onnx/csrc/macros.h"
@@ -51,12 +52,11 @@ std::atomic<bool> license_status = false;
 std::atomic<uint64_t> total_connections = 0;
 std::atomic<int32_t> num_max_connections = 0;
 
-void* check_license(void* ptr) {
-    std::string* arr = (std::string*)ptr;
+void* check_license() {
     LicenseClient& client = LicenseState::getInstance();
 
     while (true) {
-        sleep(client.report_interval);
+		std::this_thread::sleep_for(std::chrono::seconds(client.report_interval));
         uint64_t duration = sherpa_onnx::total_duration / 1000;
 
         // Ensure we don’t overuse the license
@@ -94,20 +94,18 @@ void BanafoLoadModel(const OnlineModelConfig &config) {
 
     if(model.getHeaderValue("free") == "false") {
       auto& banafo = BanafoLicense::getInstance(config.key, model.getHeaderValue("id"), config.referralcode);
-      pthread_t license_th;
-      int license;
 
       while(!banafo.mActivationFinished)
       {
-        sleep(1);
+        std::this_thread::sleep_for(std::chrono::seconds(1));
       }
       if(!banafo.mActivated) {
         exit(1);
       }
 
       sherpa_onnx::license_status = true;
-      license = pthread_create(&license_th, NULL, check_license, NULL);
-      pthread_detach(license);
+      std::thread license_th(check_license);
+      license_th.detach();
 
       auto& client = LicenseState::getInstance();
     

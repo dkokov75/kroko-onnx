@@ -8,6 +8,8 @@
 #include "sherpa-onnx/csrc/parse-options.h"
 #include "sherpa-onnx/csrc/httplib.h"
 
+#include <thread>
+
 const char* banafo_help = R"(
 
 Automatic speech recognition using websocket.
@@ -79,8 +81,8 @@ void* http_thread(void* ptr) {
         res.status = 503;
       }
     });
-
-    sleep(5);
+	
+	std::this_thread::sleep_for(std::chrono::seconds(5));
     svr.listen("0.0.0.0", *(int32_t*)ptr);
   } catch(std::exception& e)
   {
@@ -154,7 +156,7 @@ int32_t main(int32_t argc, char *argv[]) {
 
   config.Validate();
 
-  pthread_t http_th;
+  std::thread http_th;
   asio::io_context io_conn;  // for network connections
   asio::io_context io_work;  // for neural network and decoding
 
@@ -167,7 +169,7 @@ int32_t main(int32_t argc, char *argv[]) {
 
 #ifdef KROKO_LICENSE 
   if(metrics_port > 0) {
-    http_th = pthread_create(&http_th, NULL, http_thread, &metrics_port);
+    http_th = std::thread(http_thread, &metrics_port);
   }
 #endif  
 
@@ -198,7 +200,7 @@ int32_t main(int32_t argc, char *argv[]) {
 
 #ifdef KROKO_LICENSE 
   if(metrics_port > 0) {
-    pthread_join(http_th, NULL);
+    http_th.join();
   }
 #endif  
 
