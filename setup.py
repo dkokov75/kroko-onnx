@@ -29,7 +29,7 @@ def get_package_version():
     latest_version = match.group(1).strip('"')
 
     cmake_args = os.environ.get("SHERPA_ONNX_CMAKE_ARGS", "")
-    extra_version = "post6"
+    extra_version = "post7"
     if "-DSHERPA_ONNX_ENABLE_GPU=ON" in cmake_args:
         extra_version = "+cuda"
 
