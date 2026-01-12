@@ -1,0 +1,71 @@
+name: build-wheels-macos-universal2
+
+on:
+  push:
+    branches:
+      - wheel
+  workflow_dispatch:
+
+env:
+  SHERPA_ONNX_IS_IN_GITHUB_ACTIONS: 1
+
+concurrency:
+  group: build-wheels-macos-universal2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_wheels_macos_universal2:
+    name: ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14]
+        python-version: ["cp38", "cp39", "cp310", "cp311", "cp312", "cp313"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update version
+        shell: bash
+        run: |
+          ./new-release.sh
+          git diff .
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.21.3
+        env:
+          CIBW_BUILD: "${{ matrix.python-version}}-* "
+          CIBW_ENVIRONMENT: SHERPA_ONNX_CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES='arm64;x86_64'"
+          CIBW_ARCHS: "universal2"
+          CIBW_BUILD_VERBOSITY: 3
+
+          #  Don't repair macOS wheels
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: ""
+
+      - name: Display wheels
+        shell: bash
+        run: |
+          ls -lh ./wheelhouse/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.python-version }}
+          path: ./wheelhouse/*.whl
+
+
+#      - name: Publish wheels to PyPI
+#        env:
+#          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+#          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+#        run: |
+#          opts='--break-system-packages'
+#          v=${{ matrix.python-version }}
+#          if [[ $v == cp38 || $v == cp39 ]]; then
+#            opts=''
+#          fi
+
+##          python3 -m pip install $opts --upgrade pip
+ #         python3 -m pip install $opts wheel twine==5.0.0 setuptools
+
+#          twine upload ./wheelhouse/*.whl
