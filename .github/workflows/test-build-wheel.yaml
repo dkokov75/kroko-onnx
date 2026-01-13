@@ -90,15 +90,15 @@ jobs:
         shell: bash
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install wheel twine setuptools
+          python3 -m pip install wheel setuptools
 
-      - name: Add MSBuild to PATH
-        if: runner.os == 'Windows'
-        uses: microsoft/setup-msbuild@v2
+#      - name: Add MSBuild to PATH
+#        if: runner.os == 'Windows'
+#        uses: microsoft/setup-msbuild@v2
 
-      - name: Setup MSVC devcmd
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
+#      - name: Setup MSVC devcmd
+#        if: runner.os == 'Windows'
+#        uses: ilammy/msvc-dev-cmd@v1
 
       - name: Build
         shell: bash
@@ -173,8 +173,8 @@ jobs:
           rm -rf dist
           mv patched_dist dist
 
-      - name: List contents
-        run: ls -lsh dist
+#      - name: List contents
+#        run: ls -lsh dist
 
       - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
