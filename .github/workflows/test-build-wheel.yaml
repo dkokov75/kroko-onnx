@@ -157,7 +157,8 @@ jobs:
           pattern: wheel-*
           merge-multiple: true
 
-      - name: Patch Wheels
+      - name: Patch Linux Wheels
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           pip install wheel
