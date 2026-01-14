@@ -26,62 +26,62 @@ jobs:
       matrix:
         # See https://github.com/actions/runner-images
         include:
-          - os: ubuntu-latest
-            python-version: "3.9"
-          - os: ubuntu-latest
-            python-version: "3.10"
-          - os: ubuntu-latest
-            python-version: "3.11"
-          - os: ubuntu-latest
-            python-version: "3.12"
-          - os: ubuntu-latest
-            python-version: "3.13"
+#          - os: ubuntu-latest
+#            python-version: "3.9"
+#          - os: ubuntu-latest
+#            python-version: "3.10"
+#          - os: ubuntu-latest
+#            python-version: "3.11"
+#          - os: ubuntu-latest
+#            python-version: "3.12"
+#          - os: ubuntu-latest
+#            python-version: "3.13"
           - os: ubuntu-latest
             python-version: "3.14"
 
-          - os: ubuntu-24.04-arm
-            python-version: "3.9"
-          - os: ubuntu-24.04-arm
-            python-version: "3.10"
-          - os: ubuntu-24.04-arm
-            python-version: "3.11"
-          - os: ubuntu-24.04-arm
-            python-version: "3.12"
+#          - os: ubuntu-24.04-arm
+#            python-version: "3.9"
+#          - os: ubuntu-24.04-arm
+#            python-version: "3.10"
+#          - os: ubuntu-24.04-arm
+#            python-version: "3.11"
+#          - os: ubuntu-24.04-arm
+#            python-version: "3.12"
           - os: ubuntu-24.04-arm
             python-version: "3.13"
 
-          - os: macos-15-intel
-            python-version: "3.8"
-          - os: macos-15-intel
-            python-version: "3.9"
-          - os: macos-15-intel
-            python-version: "3.10"
+#          - os: macos-15-intel
+#            python-version: "3.8"
+#          - os: macos-15-intel
+#            python-version: "3.9"
+#          - os: macos-15-intel
+#            python-version: "3.10"
           - os: macos-15-intel
             python-version: "3.11"
 
-          - os: macos-14
-            python-version: "3.9"
-          - os: macos-14
-            python-version: "3.10"
-          - os: macos-14
-            python-version: "3.11"
-          - os: macos-14
-            python-version: "3.12"
-          - os: macos-14
-            python-version: "3.13"
+#          - os: macos-14
+#            python-version: "3.9"
+#          - os: macos-14
+#            python-version: "3.10"
+#          - os: macos-14
+#            python-version: "3.11"
+#          - os: macos-14
+#            python-version: "3.12"
+#          - os: macos-14
+#            python-version: "3.13"
           - os: macos-14
             python-version: "3.14"
 
-          - os: windows-2022
-            python-version: "3.8"
-          - os: windows-2022
-            python-version: "3.9"
-          - os: windows-2022
-            python-version: "3.10"
-          - os: windows-2022
-            python-version: "3.11"
-          - os: windows-2022
-            python-version: "3.12"
+#          - os: windows-2022
+#            python-version: "3.8"
+#          - os: windows-2022
+#            python-version: "3.9"
+#          - os: windows-2022
+#            python-version: "3.10"
+#          - os: windows-2022
+#            python-version: "3.11"
+#          - os: windows-2022
+#            python-version: "3.12"
           - os: windows-2022
             python-version: "3.13"
 
@@ -157,34 +157,21 @@ jobs:
           pattern: wheel-*
           merge-multiple: true
 
-      - name: Patch Linux Wheels
+      - name: Fix Linux Wheel Tags for TestPyPI
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          pip install wheel
-          
-          mkdir -p patched_dist
-          
-          for whl in dist/*.whl; do
-            echo "Processing $whl..."
-            
-            mkdir -p tmp_wheel
-            unzip -q "$whl" -d tmp_wheel
-            
-            python -m wheel pack tmp_wheel -d patched_dist/
-            
-            rm -rf tmp_wheel
+          cd dist
 
+          for f in *linux_*.whl; do
+            if [ -f "$f" ]; then
+              new_name="${f/linux_/manylinux2014_}"
+              echo "Renaming $f to $new_name"
+              mv "$f" "$new_name"
+            fi
           done
-
-          cd patched_dist
-          for f in *linux_x86_64.whl; do
-            mv "$f" "${f/linux_x86_64/manylinux2014_x86_64}"
-          done
-          cd ..
-
-          rm -rf dist
-          mv patched_dist dist
+          
+          ls -lh
 
       - name: List contents
         run: ls -lsh dist
