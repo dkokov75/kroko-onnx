@@ -1,0 +1,54 @@
+name: Manual matrix test (x86_64 + ARM64)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        arch: [x86_64, arm64]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable QEMU (ARM only)
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          architecture: ${{ matrix.arch }}
+
+      - name: Create venv
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip setuptools wheel
+
+      - name: Install from TestPyPI
+        run: |
+          source venv/bin/activate
+          pip install \
+            --index-url https://test.pypi.org/simple/ \
+            --extra-index-url https://pypi.org/simple \
+            kroko-onnx
+
+      - name: CLI test
+        run: |
+          source venv/bin/activate
+          sherpa-onnx --help
+
+      - name: Python import test
+        run: |
+          source venv/bin/activate
+          python - << 'EOF'
+          import kroko_onnx
+          print("OK on", "${{ matrix.arch }}")
+          EOF
