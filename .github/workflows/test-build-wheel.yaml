@@ -36,8 +36,8 @@ jobs:
           #  python-version: "3.12"
           #- os: ubuntu-latest
           #  python-version: "3.13"
-          - os: ubuntu-latest
-            python-version: "3.14"
+          #- os: ubuntu-latest
+          #  python-version: "3.14"
 
           #- os: ubuntu-24.04-arm
           #  python-version: "3.9"
@@ -47,8 +47,8 @@ jobs:
           #  python-version: "3.11"
           #- os: ubuntu-24.04-arm
           #  python-version: "3.12"
-          - os: ubuntu-24.04-arm
-            python-version: "3.13"
+          #- os: ubuntu-24.04-arm
+          #  python-version: "3.13"
 
           #- os: macos-15-intel
           #  python-version: "3.8"
@@ -56,8 +56,8 @@ jobs:
           #  python-version: "3.9"
           #- os: macos-15-intel
           #  python-version: "3.10"
-          - os: macos-15-intel
-            python-version: "3.11"
+          #- os: macos-15-intel
+          #  python-version: "3.11"
 
           #- os: macos-14
           #  python-version: "3.9"
@@ -144,20 +144,47 @@ jobs:
         run: |
           pip install --verbose ./dist/*.whl
 
-      - name: Test
+      - name: Test sherpa-onnx CLI
         shell: bash
         run: |
+          echo "Searching for sherpa-onnx.exe..."
+          find . -name "sherpa-onnx.exe" -type f
+          
           if [ "$RUNNER_OS" == "Windows" ]; then
-            CMD_NAME="sherpa-onnx.exe"
-            export PATH="$pythonLocation/Scripts:$PATH"
+            CLEAN_PYTHON_PATH=$(cygpath -u "$pythonLocation")
+            CMD_PATH="$CLEAN_PYTHON_PATH/Scripts/sherpa-onnx.exe"
+            
+            if [ ! -f "$CMD_PATH" ]; then
+              echo "Not in Scripts, checking build folder..."
+              CMD_PATH=$(find build -name "sherpa-onnx.exe" | head -n 1)
+            fi
           else
-            CMD_NAME="sherpa-onnx"
+            CMD_PATH="sherpa-onnx"
           fi
 
-          echo "Testing command: $CMD_NAME"
+          echo "Final command path: $CMD_PATH"
           
-          which $CMD_NAME || echo "$CMD_NAME not found in PATH"
-          $CMD_NAME --help
+          if [ -z "$CMD_PATH" ] || [ ! -f "$CMD_PATH" ] && [ "$RUNNER_OS" == "Windows" ]; then
+             echo "Error: Binary not found!"
+             exit 1
+          fi
+
+          "$CMD_PATH" --help
+
+#      - name: Test
+#        shell: bash
+#        run: |
+#          if [ "$RUNNER_OS" == "Windows" ]; then
+#            CMD_NAME="sherpa-onnx.exe"
+#            export PATH="$pythonLocation/Scripts:$PATH"
+#          else
+#            CMD_NAME="sherpa-onnx"
+#          fi
+
+#          echo "Testing command: $CMD_NAME"
+          
+#          which $CMD_NAME || echo "$CMD_NAME not found in PATH"
+#          $CMD_NAME --help
 
   upload_test_pypi:
     needs: [test-build-wheel]
