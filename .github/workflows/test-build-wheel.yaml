@@ -56,19 +56,19 @@ jobs:
           #  python-version: "3.9"
           #- os: macos-15-intel
           #  python-version: "3.10"
-          - os: macos-15-intel
-            python-version: "3.11"
-
-          #- os: macos-14
-          #  python-version: "3.9"
-          #- os: macos-14
-          #  python-version: "3.10"
-          #- os: macos-14
+          #- os: macos-15-intel
           #  python-version: "3.11"
-          #- os: macos-14
-          #  python-version: "3.12"
-          #- os: macos-14
-          #  python-version: "3.13"
+
+          - os: macos-14
+            python-version: "3.9"
+          - os: macos-14
+            python-version: "3.10"
+          - os: macos-14
+            python-version: "3.11"
+          - os: macos-14
+            python-version: "3.12"
+          - os: macos-14
+            python-version: "3.13"
           - os: macos-14
             python-version: "3.14"
 
