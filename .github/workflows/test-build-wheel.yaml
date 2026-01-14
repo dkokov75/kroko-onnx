@@ -128,6 +128,7 @@ jobs:
         with:
           name: wheel-${{ matrix.os }}-${{ matrix.python-version }}
           path: ./dist/*.whl
+          compression-level: 0
 
       - name: Display wheel
         shell: bash
@@ -183,6 +184,13 @@ jobs:
           path: dist
           pattern: wheel-*
           merge-multiple: true
+
+      - name: Verify Wheel Integrity (Pre-patch)
+        run: |
+          for f in dist/*.whl; do
+            echo "Checking integrity of $f"
+            unzip -t "$f" || (echo "Corrupted ZIP: $f" && exit 1)
+          done
 
       - name: Fix Linux Wheel Tags for TestPyPI
         if: runner.os == 'Linux'
