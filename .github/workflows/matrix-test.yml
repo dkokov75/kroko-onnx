@@ -14,41 +14,50 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Enable QEMU (ARM only)
-        if: matrix.arch == 'arm64'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
-      - name: Setup Python
+      # ---------- x86_64 ----------
+      - name: Setup Python (x86_64)
+        if: matrix.arch == 'x86_64'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          architecture: ${{ matrix.arch }}
 
-      - name: Create venv
+      - name: x86_64 tests
+        if: matrix.arch == 'x86_64'
         run: |
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip setuptools wheel
 
-      - name: Install from TestPyPI
-        run: |
-          source venv/bin/activate
           pip install \
             --index-url https://test.pypi.org/simple/ \
             --extra-index-url https://pypi.org/simple \
             kroko-onnx
 
-      - name: CLI test
-        run: |
-          source venv/bin/activate
           sherpa-onnx --help
-
-      - name: Python import test
-        run: |
-          source venv/bin/activate
           python - << 'EOF'
           import kroko_onnx
-          print("OK on", "${{ matrix.arch }}")
+          print("OK on x86_64")
           EOF
+
+      # ---------- ARM64 ----------
+      - name: Enable QEMU (ARM64)
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: ARM64 tests (Docker)
+        if: matrix.arch == 'arm64'
+        run: |
+          docker run --rm --platform linux/arm64 python:3.11-slim bash -c "
+            pip install --upgrade pip setuptools wheel && \
+            pip install \
+              --index-url https://test.pypi.org/simple/ \
+              --extra-index-url https://pypi.org/simple \
+              kroko-onnx && \
+            sherpa-onnx --help && \
+            python - << 'EOF'
+          import kroko_onnx
+          print('OK on ARM64')
+          EOF
+          "
