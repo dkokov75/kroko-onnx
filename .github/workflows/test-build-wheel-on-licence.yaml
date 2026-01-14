@@ -1,4 +1,4 @@
-name: test-build-wheel
+name: test-build-wheel-on-licence
 
 on:
   push:
