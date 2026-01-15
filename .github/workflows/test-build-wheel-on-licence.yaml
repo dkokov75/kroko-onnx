@@ -112,9 +112,13 @@ jobs:
           python3 -m pip install --upgrade pip
           python3 -m pip install wheel setuptools build
 
-      - name: Install OpenSSL on Windows
+#      - name: Install OpenSSL on Windows
+#        if: runner.os == 'Windows'
+#        run: vcpkg install openssl:x64-windows
+
+      - name: Install Full OpenSSL for Development
         if: runner.os == 'Windows'
-        run: vcpkg install openssl:x64-windows
+        run: choco install openssl -y --no-progress
 
       - name: Locate OpenSSL
         run: |
@@ -122,34 +126,34 @@ jobs:
           Get-Command openssl | Select-Object -ExpandProperty Definition
         shell: pwsh
 
-      - name: Diagnostic - Check OpenSSL and Paths
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Write-Host "--- Checking OpenSSL Version ---"
-          try { openssl version -a } catch { Write-Host "openssl command not found" }
+#      - name: Diagnostic - Check OpenSSL and Paths
+#        if: runner.os == 'Windows'
+#        shell: pwsh
+#        run: |
+#          Write-Host "--- Checking OpenSSL Version ---"
+#          try { openssl version -a } catch { Write-Host "openssl command not found" }
 
-          Write-Host "`n--- Searching for OpenSSL directories ---"
-          Get-ChildItem -Path "C:\Program Files" -Filter "*OpenSSL*" | Select-Object FullName
-          Get-ChildItem -Path "C:\" -Filter "OpenSSL*" | Select-Object FullName
+#          Write-Host "`n--- Searching for OpenSSL directories ---"
+#          Get-ChildItem -Path "C:\Program Files" -Filter "*OpenSSL*" | Select-Object FullName
+#          Get-ChildItem -Path "C:\" -Filter "OpenSSL*" | Select-Object FullName
 
-          Write-Host "`n--- Checking VCPKG Root ---"
-          Write-Host "VCPKG_INSTALLATION_ROOT: $env:VCPKG_INSTALLATION_ROOT"
+#          Write-Host "`n--- Checking VCPKG Root ---"
+#          Write-Host "VCPKG_INSTALLATION_ROOT: $env:VCPKG_INSTALLATION_ROOT"
     
-          if (Test-Path "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\include\openssl") {
-            Write-Host "OpenSSL found in VCPKG!"
-          } else {
-            Write-Host "OpenSSL NOT found in VCPKG."
-          }
+#          if (Test-Path "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\include\openssl") {
+#            Write-Host "OpenSSL found in VCPKG!"
+#          } else {
+#            Write-Host "OpenSSL NOT found in VCPKG."
+#          }
 
-          Write-Host "`n--- Environment Variables ---"
-          Get-ChildItem Env: | Where-Object { $_.Name -like "*OPENSSL*" }
+#          Write-Host "`n--- Environment Variables ---"
+#          Get-ChildItem Env: | Where-Object { $_.Name -like "*OPENSSL*" }
 
       - name: Build
         shell: bash
         run: |
           if [ "$RUNNER_OS" == "Windows" ]; then
-            export CMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+            export OPENSSL_ROOT_DIR="C:/Program Files/OpenSSL"
           fi
 
           export CMAKE_CXX_COMPILER_LAUNCHER=ccache
