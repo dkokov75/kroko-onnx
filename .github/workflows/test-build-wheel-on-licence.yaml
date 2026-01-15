@@ -142,6 +142,26 @@ jobs:
             Write-Host "❌ Libraries MISSING!"
           }
 
+      - name: Fix OpenSSL Library Paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $baseDir = "C:\Program Files\OpenSSL"
+          $libFile = Get-ChildItem -Path $baseDir -Filter "libssl.lib" -Recurse | Select-Object -First 1
+    
+          if ($libFile) {
+            $actualLibDir = $libFile.DirectoryName
+            Write-Host "✅ Библиотеките са намерени в: $actualLibDir"
+        
+            if ($actualLibDir -ne "$baseDir\lib") {
+              Copy-Item "$actualLibDir\*.lib" "$baseDir\lib\" -Force
+              Write-Host "🚀 Файловете бяха копирани в $baseDir\lib за по-добра съвместимост с CMake."
+            }
+          } else {
+            Write-Error "❌ libssl.lib не беше намерен никъде в $baseDir"
+            exit 1
+          }
+
 #      - name: Diagnostic - Check OpenSSL and Paths
 #        if: runner.os == 'Windows'
 #        shell: pwsh
