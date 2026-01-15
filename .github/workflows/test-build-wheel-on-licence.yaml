@@ -112,6 +112,10 @@ jobs:
           python3 -m pip install --upgrade pip
           python3 -m pip install wheel setuptools build
 
+      - name: Install OpenSSL on Windows
+        if: runner.os == 'Windows'
+        run: vcpkg install openssl:x64-windows
+
       - name: Build
         shell: bash
         run: |
