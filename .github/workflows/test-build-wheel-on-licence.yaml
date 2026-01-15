@@ -116,51 +116,51 @@ jobs:
 #        if: runner.os == 'Windows'
 #        run: vcpkg install openssl:x64-windows
 
-      - name: Install Full OpenSSL for Development
-        if: runner.os == 'Windows'
-        run: choco install openssl -y --no-progress
+#      - name: Install Full OpenSSL for Development
+#        if: runner.os == 'Windows'
+#        run: choco install openssl -y --no-progress
 
-      - name: Locate OpenSSL
-        run: |
-          where.exe openssl
-          Get-Command openssl | Select-Object -ExpandProperty Definition
-        shell: pwsh
+#      - name: Locate OpenSSL
+#        run: |
+#          where.exe openssl
+#          Get-Command openssl | Select-Object -ExpandProperty Definition
+#        shell: pwsh
 
-      - name: Check for OpenSSL Development Files
-        shell: pwsh
-        run: |
-          $openSSLPath = "C:\Program Files\OpenSSL"
-          if (Test-Path "$openSSLPath\include\openssl\ssl.h") {
-            Write-Host "✅ Headers found!"
-          } else {
-            Write-Host "❌ Headers MISSING! This is why CMake fails."
-          }
-    
-          if (Test-Path "$openSSLPath\lib\libssl.lib") {
-            Write-Host "✅ Libraries found!"
-          } else {
-            Write-Host "❌ Libraries MISSING!"
-          }
+#      - name: Check for OpenSSL Development Files
+#        shell: pwsh
+#        run: |
+#          $openSSLPath = "C:\Program Files\OpenSSL"
+#          if (Test-Path "$openSSLPath\include\openssl\ssl.h") {
+#            Write-Host "✅ Headers found!"
+#          } else {
+#            Write-Host "❌ Headers MISSING! This is why CMake fails."
+#          }
 
-      - name: Fix OpenSSL Library Paths
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $baseDir = "C:\Program Files\OpenSSL"
-          $libFile = Get-ChildItem -Path $baseDir -Filter "libssl.lib" -Recurse | Select-Object -First 1
-    
-          if ($libFile) {
-            $actualLibDir = $libFile.DirectoryName
-            Write-Host "✅ Библиотеките са намерени в: $actualLibDir"
-        
-            if ($actualLibDir -ne "$baseDir\lib") {
-              Copy-Item "$actualLibDir\*.lib" "$baseDir\lib\" -Force
-              Write-Host "🚀 Файловете бяха копирани в $baseDir\lib за по-добра съвместимост с CMake."
-            }
-          } else {
-            Write-Error "❌ libssl.lib не беше намерен никъде в $baseDir"
-            exit 1
-          }
+#          if (Test-Path "$openSSLPath\lib\libssl.lib") {
+#            Write-Host "✅ Libraries found!"
+#          } else {
+#            Write-Host "❌ Libraries MISSING!"
+#          }
+
+#      - name: Fix OpenSSL Library Paths
+#        if: runner.os == 'Windows'
+#        shell: pwsh
+#        run: |
+#          $baseDir = "C:\Program Files\OpenSSL"
+#          $libFile = Get-ChildItem -Path $baseDir -Filter "libssl.lib" -Recurse | Select-Object -First 1
+
+#          if ($libFile) {
+#            $actualLibDir = $libFile.DirectoryName
+#            Write-Host "✅ Библиотеките са намерени в: $actualLibDir"
+
+#            if ($actualLibDir -ne "$baseDir\lib") {
+#              Copy-Item "$actualLibDir\*.lib" "$baseDir\lib\" -Force
+#              Write-Host "🚀 Файловете бяха копирани в $baseDir\lib за по-добра съвместимост с CMake."
+#            }
+#          } else {
+#            Write-Error "❌ libssl.lib не беше намерен никъде в $baseDir"
+#            exit 1
+#          }
 
 #      - name: Diagnostic - Check OpenSSL and Paths
 #        if: runner.os == 'Windows'
@@ -188,11 +188,11 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            export OPENSSL_ROOT_DIR="C:/Program Files/OpenSSL"
-            export CMAKE_ARGS="-DOPENSSL_ROOT_DIR='C:/Program Files/OpenSSL' -DOPENSSL_USE_STATIC_LIBS=FALSE"
-            export PATH="/c/Program Files/OpenSSL/bin:$PATH"
-          fi
+          #if [ "$RUNNER_OS" == "Windows" ]; then
+          #  export OPENSSL_ROOT_DIR="C:/Program Files/OpenSSL"
+          #  export CMAKE_ARGS="-DOPENSSL_ROOT_DIR='C:/Program Files/OpenSSL' -DOPENSSL_USE_STATIC_LIBS=FALSE"
+          #  export PATH="/c/Program Files/OpenSSL/bin:$PATH"
+          #fi
 
           export CMAKE_CXX_COMPILER_LAUNCHER=ccache
           if [ "$RUNNER_OS" != "Windows" ]; then
@@ -203,9 +203,9 @@ jobs:
 
           export SHERPA_ONNX_MAKE_ARGS="VERBOSE=1 -j2"
           
-          #python3 setup.py bdist_wheel
+          python3 setup.py bdist_wheel
           #KROKO_LICENSE=ON 
-          python3 -m build
+          #python3 -m build
           ls -lh dist
 
       - uses: actions/upload-artifact@v4
