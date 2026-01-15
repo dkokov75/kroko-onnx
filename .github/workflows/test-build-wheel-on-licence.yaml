@@ -202,9 +202,10 @@ jobs:
           cmake --version
 
           export SHERPA_ONNX_MAKE_ARGS="VERBOSE=1 -j2"
-
+          
           #python3 setup.py bdist_wheel
-          KROKO_LICENSE=ON python3 -m build
+          #KROKO_LICENSE=ON 
+          python3 -m build
           ls -lh dist
 
       - uses: actions/upload-artifact@v4
