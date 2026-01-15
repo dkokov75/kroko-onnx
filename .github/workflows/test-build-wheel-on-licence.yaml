@@ -126,6 +126,22 @@ jobs:
           Get-Command openssl | Select-Object -ExpandProperty Definition
         shell: pwsh
 
+      - name: Check for OpenSSL Development Files
+        shell: pwsh
+        run: |
+          $openSSLPath = "C:\Program Files\OpenSSL"
+          if (Test-Path "$openSSLPath\include\openssl\ssl.h") {
+            Write-Host "✅ Headers found!"
+          } else {
+            Write-Host "❌ Headers MISSING! This is why CMake fails."
+          }
+    
+          if (Test-Path "$openSSLPath\lib\libssl.lib") {
+            Write-Host "✅ Libraries found!"
+          } else {
+            Write-Host "❌ Libraries MISSING!"
+          }
+
 #      - name: Diagnostic - Check OpenSSL and Paths
 #        if: runner.os == 'Windows'
 #        shell: pwsh
