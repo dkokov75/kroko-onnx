@@ -50,14 +50,12 @@ jobs:
         if: matrix.arch == 'arm64'
         run: |
           docker run --rm --platform linux/arm64 python:3.11-slim bash -c "
-            pip install --upgrade pip setuptools wheel && \
-            pip install \
-              --index-url https://test.pypi.org/simple/ \
-              --extra-index-url https://pypi.org/simple \
-              kroko-onnx && \
-            sherpa-onnx --help && \
-            python - << 'EOF'
-          import kroko_onnx
-          print('OK on ARM64')
-          EOF
+          set -e
+          pip install --upgrade pip setuptools wheel
+          pip install \
+          --index-url https://test.pypi.org/simple/ \
+          --extra-index-url https://pypi.org/simple \
+          kroko-onnx
+          sherpa-onnx --help
+          python -c \"import kroko_onnx; print('OK on ARM64')\"
           "
