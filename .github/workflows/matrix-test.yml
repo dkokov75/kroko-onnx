@@ -27,11 +27,7 @@ jobs:
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip setuptools wheel
-
-          pip install \
-            --index-url https://test.pypi.org/simple/ \
-            --extra-index-url https://pypi.org/simple \
-            kroko-onnx-2
+          pip install -i https://test.pypi.org/simple/ kroko-onnx-2
 
           sherpa-onnx --help
           python - << 'EOF'
@@ -46,16 +42,17 @@ jobs:
         with:
           platforms: arm64
 
+      - name: Set up Docker Buildx
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-buildx-action@v3
+
       - name: ARM64 tests (Docker)
         if: matrix.arch == 'arm64'
         run: |
           docker run --rm --platform linux/arm64 python:3.11-slim bash -c "
           set -e
           pip install --upgrade pip setuptools wheel
-          pip install \
-          --index-url https://test.pypi.org/simple/ \
-          --extra-index-url https://pypi.org/simple \
-          kroko-onnx-2
+          pip install -i https://test.pypi.org/simple/ kroko-onnx-2
           sherpa-onnx --help
           python -c \"import kroko_onnx; print('OK on ARM64')\"
           "
