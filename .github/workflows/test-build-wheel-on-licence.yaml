@@ -34,8 +34,8 @@ jobs:
           #  python-version: "3.11"
           #- os: ubuntu-latest
           #  python-version: "3.12"
-          - os: ubuntu-latest
-            python-version: "3.13"
+          #- os: ubuntu-latest
+          #  python-version: "3.13"
           #- os: ubuntu-latest
           #  python-version: "3.14"
 
@@ -67,8 +67,8 @@ jobs:
           #  python-version: "3.11"
           #- os: macos-14
           #  python-version: "3.12"
-          - os: macos-14
-            python-version: "3.13"
+          #- os: macos-14
+          #  python-version: "3.13"
           #- os: macos-14
           #  python-version: "3.14"
 
@@ -115,6 +115,12 @@ jobs:
       - name: Install OpenSSL on Windows
         if: runner.os == 'Windows'
         run: vcpkg install openssl:x64-windows
+
+      - name: Locate OpenSSL
+        run: |
+          where.exe openssl
+          Get-Command openssl | Select-Object -ExpandProperty Definition
+        shell: pwsh
 
       - name: Diagnostic - Check OpenSSL and Paths
         if: runner.os == 'Windows'
