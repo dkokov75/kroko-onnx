@@ -190,10 +190,15 @@ jobs:
         run: |
           if [ "$RUNNER_OS" == "Windows" ]; then
             export OPENSSL_ROOT_DIR="C:/Program Files/OpenSSL"
+            export CMAKE_ARGS="-DOPENSSL_ROOT_DIR='C:/Program Files/OpenSSL' -DOPENSSL_USE_STATIC_LIBS=FALSE"
+            export PATH="/c/Program Files/OpenSSL/bin:$PATH"
           fi
 
           export CMAKE_CXX_COMPILER_LAUNCHER=ccache
-          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+          if [ "$RUNNER_OS" != "Windows" ]; then
+            export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+          fi
+
           cmake --version
 
           export SHERPA_ONNX_MAKE_ARGS="VERBOSE=1 -j2"
