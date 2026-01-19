@@ -99,16 +99,16 @@ jobs:
             cp -v install/include/sherpa-onnx/c-api/*.h \
               /workspace/scripts/wheel/sherpa-onnx-core/sherpa_onnx/include/sherpa-onnx/c-api
 
-            pushd /workspace/scripts/wheel/sherpa-onnx-core
-            python3 setup.py bdist_wheel --plat-name=manylinux2014_x86_64
-            popd
+            #pushd /workspace/scripts/wheel/sherpa-onnx-core
+            #python3 setup.py bdist_wheel --plat-name=manylinux2014_x86_64
+            #popd
 
             ### sherpa-onnx-bin
             mkdir -p /workspace/scripts/wheel/sherpa-onnx-bin/bin
             cp -v install/bin/sherpa-onnx* \
               /workspace/scripts/wheel/sherpa-onnx-bin/bin
 
-            pushd /workspace/scripts/wheel/sherpa-onnx-bin
+            pushd /workspace/
             python3 setup.py bdist_wheel --plat-name=manylinux2014_x86_64
             popd
 
