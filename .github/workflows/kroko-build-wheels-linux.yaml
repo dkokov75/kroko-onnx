@@ -142,7 +142,7 @@ jobs:
       - name: Collect wheels
         shell: bash
         run: |
-          sudo chown -R $USER ./scripts/wheel
+          sudo chown -R $(id -u).$(id -g) ./scripts/wheel
           mkdir wheelhouse
           cp -v ./scripts/wheel/sherpa-onnx-core/dist/*.whl ./wheelhouse
           cp -v ./scripts/wheel/sherpa-onnx-bin/dist/*.whl ./wheelhouse
@@ -155,7 +155,7 @@ jobs:
       - name: Show wheels
         shell: bash
         run: |
-          sudo chown -R $USER ./scripts/wheel
+          sudo chown -R $(id -u).$(id -g) ./scripts/wheel
           ls -lh ./scripts/wheel/sherpa-onnx-core/dist
           ls -lh ./scripts/wheel/sherpa-onnx-bin/dist
 
