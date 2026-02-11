@@ -29,7 +29,7 @@ jobs:
       - name: Python Import Test
         run: |
           # Use the actual module name for the import test
-          python -c "import kroko_onnx; print('✅ Import successful!')"
+          python -c "import kroko_onnx; print('SUCCESS: Import successful!')"
 
       - name: Binary Test (Non-Windows)
         if: runner.os != 'Windows'
