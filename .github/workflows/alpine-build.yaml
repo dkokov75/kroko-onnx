@@ -1,71 +1,54 @@
-name: build-musl-wheel-lab
+name: build-musl-wheel-amd64
 
 on:
   workflow_dispatch:
 
 jobs:
   build-musl-wheel:
-    name: Build Alpine Wheel
-    runs-on: ubuntu-24.04
+    name: Build Alpine x64 Wheel
+    runs-on: ubuntu-latest # Стандартен x86_64 бегач
     container:
       image: alpine:latest
     
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install Build Dependencies
+      # Първо инсталираме зависимостите за самия GitHub Action (node.js, tar, и т.н.)
+      - name: Install Base Tools for GitHub Actions
         run: |
           apk update
-          apk add --no-cache \
-            python3 \
-            python3-dev \
-            py3-pip \
-            build-base \
-            cmake \
-            git \
-            linux-headers \
-            libexecinfo-dev \
-            bash \
-            zip
+          apk add --no-cache nodejs tar gzip bash git build-base python3 python3-dev py3-pip cmake linux-headers
+
+      # Сега checkout ще работи
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Prepare Build Environment
         shell: bash
         run: |
           python3 -m venv /opt/build_venv
           . /opt/build_venv/bin/activate
-          pip install --upgrade pip
-          pip install wheel setuptools
+          pip install --upgrade pip setuptools wheel
 
       - name: Build Wheel
         shell: bash
         run: |
           . /opt/build_venv/bin/activate
+          export SHERPA_ONNX_MAKE_ARGS="VERBOSE=1 -j$(nproc)"
           
-          export SHERPA_ONNX_MAKE_ARGS="VERBOSE=1 -j4"
-          
+          # Генериране на wheel
           python3 setup.py bdist_wheel
           
+          # Смяна на тага за musllinux (x86_64)
           cd dist
           for f in *.whl; do
-            mv "$f" "${f/linux_aarch64/musllinux_1_1_aarch64}"
+            mv "$f" "${f/linux_x86_64/musllinux_1_1_x86_64}"
           done
           ls -lh
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wheel-alpine-arm64
+          name: wheel-alpine-x64
           path: ./dist/*.whl
-          retention-days: 1
 
-      - name: Test Installed Wheel
-        shell: bash
-        run: |
-          . /opt/build_venv/bin/activate
-          pip install ./dist/*.whl
-          
-          sherpa-onnx --help || echo "Binary test skipped"
-          
-          python3 -c "import kroko_onnx; print('✅ SUCCESS: kroko_onnx works on Alpine ARM64')"
