@@ -42,19 +42,21 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          # 1. Get the scripts path
-          $pythonPath = python -c "import sys, os; print(os.path.join(sys.prefix, 'Scripts'))"
+          # 1. Find the Python root directory
+          $pyRoot = python -c "import sys; print(sys.prefix)"
           
-          echo "--- Content of $pythonPath ---"
-          if (Test-Path $pythonPath) {
-              Get-ChildItem $pythonPath  # This will list every file installed there
+          # 2. Based on your .whl structure, the files should be in 'bin' under the root
+          $binPath = Join-Path $pyRoot "bin"
+          
+          echo "--- Checking for binaries in: $binPath ---"
+          if (Test-Path $binPath) {
+              Get-ChildItem $binPath
+              $env:Path += ";$binPath"
+              
+              # 3. Try running the offline binary from the discovered path
+              # Note: Under Windows, these might lack the .exe extension if not built correctly
+              & "$binPath\sherpa-onnx-offline.exe" --help
           } else {
-              echo "Directory does not exist!"
+              Write-Error "Could not find the bin folder at $binPath"
+              exit 1
           }
-          
-          # 2. Add to path
-          $env:Path += ";$pythonPath"
-          
-          # 3. Try to run it. If it fails, we will see the directory listing above
-          # Let's try calling it without .exe just in case
-          sherpa-onnx-offline --help
