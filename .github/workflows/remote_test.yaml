@@ -64,22 +64,28 @@ jobs:
       - name: Environment Diagnostics
         shell: bash
         run: |
-          echo " --- OS DETAILS ---"
+          echo "🌐 --- OS & LIBC DETAILS ---"
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
           elif [[ "$RUNNER_OS" == "macOS" ]]; then
             sw_vers
           else
+            # Linux distributions
             [ -f /etc/os-release ] && cat /etc/os-release | grep PRETTY_NAME
-            ldd --version | head -n 1
+            # We use sed to get the first line safely without SIGPIPE errors
+            ldd --version | sed -n '1p'
           fi
           
           echo -e "\n --- ARCHITECTURE ---"
           uname -m
           
-          echo -e "\n --- PYTHON ---"
-          python3 --version || python --version
-          
+          echo -e "\n --- PYTHON & LIBS ---"
+          PY_CMD=$(command -v python3 || command -v python)
+          $PY_CMD --version
+          $PY_CMD -m pip --version
+          # Quick check for NumPy if already installed
+          $PY_CMD -c "import numpy; print(f'NumPy: {numpy.__version__}')" 2>/dev/null || echo "NumPy: Not installed yet"
+
       - name: Install Python in Containers
         if: matrix.container != ''
         run: |
