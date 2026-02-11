@@ -81,8 +81,19 @@ jobs:
       
       - name: Install kroko-onnx-2
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install -i https://test.pypi.org/simple/ kroko-onnx-2 --break-system-packages
+          #python3 -m pip install --upgrade pip
+          #pip3 install -i https://test.pypi.org/simple/ kroko-onnx-2 --break-system-packages
+          if command -v python3 > /dev/null; then PY_CMD=python3; else PY_CMD=python; fi
+          
+          if [ -n "${{ matrix.container }}" ]; then
+            $PY_CMD -m venv /opt/venv
+            export PATH="/opt/venv/bin:$PATH"
+            echo "/opt/venv/bin" >> $GITHUB_PATH
+            PY_CMD=/opt/venv/bin/python
+          fi
+
+          $PY_CMD -m pip install --upgrade pip
+          $PY_CMD -m pip install -i https://test.pypi.org/simple/ kroko-onnx-2
 
       - name: Python Import Test
         shell: bash
