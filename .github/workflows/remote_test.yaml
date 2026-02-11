@@ -15,10 +15,10 @@ jobs:
           # --- Standard Runners (Native OS) ---
           - os: ubuntu-latest
             python-version: '3.10'
-          - os: ubuntu-latest
-            python-version: '3.11'
-          - os: ubuntu-latest
-            python-version: '3.12'
+          #- os: ubuntu-latest
+           # python-version: '3.10'
+          #- os: ubuntu-latest
+          #  python-version: '3.12'
           - os: windows-latest
             python-version: '3.11'
           - os: macos-latest
@@ -35,7 +35,7 @@ jobs:
             name: "Fedora 40"
           - os: ubuntu-latest
             container: "amazonlinux:2023"
-            python-version: '3.10'
+            python-version: '3.13'
             name: "Amazon Linux 2023"
           
     steps:
