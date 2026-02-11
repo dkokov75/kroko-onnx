@@ -26,7 +26,16 @@ jobs:
             name: ubuntu-latest
             
           - os: ubuntu-24.04-arm
+            python-version: '3.10'
+            name: "Ubuntu 24.04 ARM64"
+          - os: ubuntu-24.04-arm
             python-version: '3.11'
+            name: "Ubuntu 24.04 ARM64"
+          - os: ubuntu-24.04-arm
+            python-version: '3.12'
+            name: "Ubuntu 24.04 ARM64"
+          - os: ubuntu-24.04-arm
+            python-version: '3.13'
             name: "Ubuntu 24.04 ARM64"
             
           - os: windows-latest
@@ -58,22 +67,22 @@ jobs:
           # --- Linux Distribution Containers ---
           - os: ubuntu-latest
             container: "debian:12"
-            python-version: '3.11'
+            python-version: '3.10'
             name: "Debian 12"
             
           - os: ubuntu-latest
             container: "fedora:40"
-            python-version: '3.12'
+            python-version: '3.10'
             name: "Fedora 40"
             
           - os: ubuntu-latest
             container: "amazonlinux:2023"
-            python-version: '3.11'
+            python-version: '3.10'
             name: "Amazon Linux 2023"
             
           - os: ubuntu-latest
             container: "archlinux:latest"
-            python-version: '3.13'
+            python-version: '3.10'
             name: "Arch Linux"
           
     steps:
