@@ -40,7 +40,7 @@ jobs:
       - name: Run Binary Help Test
         shell: bash
         run: |
-          if command -v kroko-onnx-offline > /dev/null; then
+          if command -v sherpa-onnx-offline > /dev/null; then
             kroko-onnx-offline --help | head -n 5
           else
             echo "⚠️ Binary not found in PATH, checking local bin..."
