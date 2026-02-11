@@ -51,6 +51,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install tar for Amazon Linux
+        if: matrix.name == 'Amazon Linux 2023'
+        run: dnf install -y tar gzip
+      
       - name: Install Python in Containers
         if: matrix.container != ''
         run: |
