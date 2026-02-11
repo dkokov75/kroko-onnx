@@ -1,50 +1,61 @@
-name: build-musl-wheel-amd64
+name: build-musl-wheel-x64
 
 on:
   workflow_dispatch:
 
 jobs:
   build-musl-wheel:
-    name: Build Alpine x64 Wheel
-    runs-on: ubuntu-latest # Стандартен x86_64 бегач
+    name: Alpine x64 Build
+    runs-on: ubuntu-latest
     container:
       image: alpine:latest
     
     steps:
-      # Първо инсталираме зависимостите за самия GitHub Action (node.js, tar, и т.н.)
-      - name: Install Base Tools for GitHub Actions
+      # 1. Critical: Install nodejs and tools BEFORE checkout
+      - name: Install System Bootstraps
         run: |
           apk update
-          apk add --no-cache nodejs tar gzip bash git build-base python3 python3-dev py3-pip cmake linux-headers
+          apk add --no-cache nodejs tar gzip bash git build-base cmake python3 python3-dev py3-pip linux-headers libexecinfo-dev
 
-      # Сега checkout ще работи
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Prepare Build Environment
+      - name: Update version
         shell: bash
         run: |
-          python3 -m venv /opt/build_venv
-          . /opt/build_venv/bin/activate
+          chmod +x new-release.sh
+          ./new-release.sh
+
+      - name: Prepare Python Build Tools
+        shell: bash
+        run: |
+          python3 -m venv /opt/venv
+          . /opt/venv/bin/activate
           pip install --upgrade pip setuptools wheel
 
       - name: Build Wheel
         shell: bash
         run: |
-          export CMAKE_CXX_COMPILER_LAUNCHER=ccache
-          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          cmake --version
-
-          export SHERPA_ONNX_MAKE_ARGS="VERBOSE=1 -j2"
-
+          . /opt/venv/bin/activate
+          # Explicitly set C++ flags for musl compatibility if needed
+          export CFLAGS="-D_GNU_SOURCE"
+          export CXXFLAGS="-D_GNU_SOURCE"
+          export SHERPA_ONNX_MAKE_ARGS="-j$(nproc) VERBOSE=1"
+          
           python3 setup.py bdist_wheel
-          ls -lh dist
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+      - name: Fix Tags & Upload
+        shell: bash
+        run: |
+          cd dist
+          # Rename to musllinux so pip knows it's for Alpine
+          for f in *linux_x86_64.whl; do
+            mv "$f" "${f/linux_x86_64/musllinux_1_1_x86_64}"
+          done
+          ls -lh
+
+      - uses: actions/upload-artifact@v4
         with:
           name: wheel-alpine-x64
           path: ./dist/*.whl
-
