@@ -24,8 +24,7 @@ jobs:
       - name: Install kroko-onnx-2
         run: |
           python -m pip install --upgrade pip
-          # Use --extra-index-url to fetch dependencies like onnxruntime from main PyPI
-          pip install -i https://test.pypi.org --extra-index-url https://pypi.org kroko-onnx-2
+          pip install -i https://test.pypi.org/simple/ kroko-onnx-2
 
       - name: Python Import Test
         run: |
