@@ -82,7 +82,7 @@ jobs:
       - name: Install kroko-onnx-2
         run: |
           python3 -m pip install --upgrade pip
-          pip3 install -i https://test.pypi.org/simple/ kroko-onnx-2
+          pip3 install -i https://test.pypi.org/simple/ kroko-onnx-2 --break-system-packages
 
       - name: Python Import Test
         shell: bash
