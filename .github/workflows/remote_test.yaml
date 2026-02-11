@@ -81,13 +81,13 @@ jobs:
       
       - name: Install kroko-onnx-2
         run: |
-          python -m pip install --upgrade pip
-          pip install -i https://test.pypi.org/simple/ kroko-onnx-2
+          python3 -m pip install --upgrade pip
+          pip3 install -i https://test.pypi.org/simple/ kroko-onnx-2
 
       - name: Python Import Test
         shell: bash
         run: |
-          python -c "import kroko_onnx; print('SUCCESS: kroko_onnx imported successfully')"
+          python3 -c "import kroko_onnx; print('SUCCESS: kroko_onnx imported successfully')"
 
       - name: Binary Test (Non-Windows)
         if: runner.os != 'Windows'
