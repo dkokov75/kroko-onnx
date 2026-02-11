@@ -51,6 +51,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Identity Check (OS & Arch)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          echo "🌐 Operating System Details:"
+          if [ -f /etc/os-release ]; then
+            cat /etc/os-release | grep PRETTY_NAME
+          fi
+          echo "🏗️ CPU Architecture:"
+          uname -m
+          echo "🐍 Python Path:"
+          python3 -c "import sys; print(sys.executable)"
+      
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
