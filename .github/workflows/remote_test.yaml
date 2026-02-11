@@ -16,14 +16,22 @@ jobs:
           # --- Standard Runners (Native OS) ---
           - os: ubuntu-latest
             python-version: '3.10'
-          #- os: ubuntu-latest
-           # python-version: '3.10'
-          #- os: ubuntu-latest
-          #  python-version: '3.12'
+            name: {{matrix.os}}
+          - os: ubuntu-latest
+            python-version: '3.11'
+            name: {{matrix.os}}
+          - os: ubuntu-latest
+            python-version: '3.12'
+            name: {{matrix.os}}
+          - os: ubuntu-latest
+            python-version: '3.13'
+            name: {{matrix.os}}
           - os: windows-latest
-            python-version: '3.11'
+            python-version: '3.13'
+            name: {{matrix.os}}
           - os: macos-latest
-            python-version: '3.11'
+            python-version: '3.13'
+            name: {{matrix.os}}
 
           # --- Linux Distribution Containers ---
           - os: ubuntu-latest
