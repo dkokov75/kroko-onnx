@@ -83,8 +83,8 @@ jobs:
         run: |
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             # Windows logic: Standard install (no venv needed for runners)
-            python -m pip install --upgrade pip
-            pip install -i https://test.pypi.org kroko-onnx-2
+            python3 -m pip install --upgrade pip
+            pip3 install -i https://test.pypi.org/simple kroko-onnx-2
           else
             # Linux & macOS logic
             PY_CMD=$(command -v python3 || command -v python)
@@ -101,7 +101,7 @@ jobs:
             fi
             
             $PYTHON_EXE -m pip install --upgrade pip
-            $PYTHON_EXE -m pip install -i https://test.pypi.org kroko-onnx-2
+            $PYTHON_EXE -m pip install -i https://test.pypi.org/simple kroko-onnx-2
           fi
 
       - name: Python Import Test
