@@ -33,18 +33,14 @@ jobs:
       - name: Build Wheel
         shell: bash
         run: |
-          . /opt/build_venv/bin/activate
-          export SHERPA_ONNX_MAKE_ARGS="VERBOSE=1 -j$(nproc)"
-          
-          # Генериране на wheel
+          export CMAKE_CXX_COMPILER_LAUNCHER=ccache
+          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+          cmake --version
+
+          export SHERPA_ONNX_MAKE_ARGS="VERBOSE=1 -j2"
+
           python3 setup.py bdist_wheel
-          
-          # Смяна на тага за musllinux (x86_64)
-          cd dist
-          for f in *.whl; do
-            mv "$f" "${f/linux_x86_64/musllinux_1_1_x86_64}"
-          done
-          ls -lh
+          ls -lh dist
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
