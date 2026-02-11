@@ -46,6 +46,10 @@ jobs:
             container: "amazonlinux:2023"
             python-version: '3.11'
             name: "Amazon Linux 2023"
+          - os: ubuntu-latest
+            container: "archlinux:latest"
+            python-version: '3.13'
+            name: "Arch Linux"
           
     steps:
       - name: Install tar for Amazon Linux
@@ -59,9 +63,11 @@ jobs:
         if: matrix.container != ''
         run: |
           if command -v apt-get > /dev/null; then
-            apt-get update && apt-get install -y python3 python3-pip python3-venv findutils
+            apt-get update && apt-get install -y python3 python3-pip python3-venv findutils tar
           elif command -v dnf > /dev/null; then
-            dnf install -y python3 python3-pip findutils
+            dnf install -y python3 python3-pip findutils tar gzip
+          elif command -v pacman > /dev/null; then
+            pacman -Syu --noconfirm python-pip python-virtualenv findutils tar gzip
           fi
           
       - name: Set up Python ${{ matrix.python-version }}
