@@ -79,31 +79,33 @@ jobs:
           echo "🐍 Python Path:"
           python3 -c "import sys; print(sys.executable)"
       
-      - name: Install kroko-onnx-2
+      - name: Install kroko-onnx-2 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
         run: |
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            # Windows logic: Standard install (no venv needed for runners)
-            python3 -m pip install --upgrade pip
-            pip3 install -i https://test.pypi.org/simple kroko-onnx-2
-          else
-            # Linux & macOS logic
-            PY_CMD=$(command -v python3 || command -v python)
-            
-            if [ -n "${{ matrix.container }}" ]; then
-              # Container-specific: Create venv to bypass PEP 668
-              $PY_CMD -m venv $HOME/test_env
-              source $HOME/test_env/bin/activate
-              echo "$HOME/test_env/bin" >> $GITHUB_PATH
-              PYTHON_EXE="$HOME/test_env/bin/python"
-            else
-              # Native Linux/macOS
-              PYTHON_EXE=$PY_CMD
-            fi
-            
-            $PYTHON_EXE -m pip install --upgrade pip
-            $PYTHON_EXE -m pip install -i https://test.pypi.org/simple kroko-onnx-2
-          fi
+          python -m pip install --upgrade pip
+          pip install -i https://test.pypi.org/simple kroko-onnx-2
 
+      - name: Install kroko-onnx-2 (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          # Detect Python
+          PY_CMD=$(command -v python3 || command -v python)
+          
+          if [ -n "${{ matrix.container }}" ]; then
+            # Use dot (.) instead of source for POSIX compatibility
+            $PY_CMD -m venv $HOME/test_env
+            . $HOME/test_env/bin/activate
+            echo "$HOME/test_env/bin" >> $GITHUB_PATH
+            PYTHON_EXE="$HOME/test_env/bin/python"
+          else
+            PYTHON_EXE=$PY_CMD
+          fi
+          
+          $PYTHON_EXE -m pip install --upgrade pip
+          $PYTHON_EXE -m pip install -i https://test.pypi.org/simple kroko-onnx-2
+          
       - name: Python Import Test
         shell: bash
         run: |
