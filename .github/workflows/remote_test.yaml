@@ -81,19 +81,28 @@ jobs:
       
       - name: Install kroko-onnx-2
         run: |
-          #python3 -m pip install --upgrade pip
-          #pip3 install -i https://test.pypi.org/simple/ kroko-onnx-2 --break-system-packages
-          if command -v python3 > /dev/null; then PY_CMD=python3; else PY_CMD=python; fi
-          
-          if [ -n "${{ matrix.container }}" ]; then
-            $PY_CMD -m venv /opt/venv
-            export PATH="/opt/venv/bin:$PATH"
-            echo "/opt/venv/bin" >> $GITHUB_PATH
-            PY_CMD=/opt/venv/bin/python
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            # Windows logic: Standard install (no venv needed for runners)
+            python -m pip install --upgrade pip
+            pip install -i https://test.pypi.org kroko-onnx-2
+          else
+            # Linux & macOS logic
+            PY_CMD=$(command -v python3 || command -v python)
+            
+            if [ -n "${{ matrix.container }}" ]; then
+              # Container-specific: Create venv to bypass PEP 668
+              $PY_CMD -m venv $HOME/test_env
+              source $HOME/test_env/bin/activate
+              echo "$HOME/test_env/bin" >> $GITHUB_PATH
+              PYTHON_EXE="$HOME/test_env/bin/python"
+            else
+              # Native Linux/macOS
+              PYTHON_EXE=$PY_CMD
+            fi
+            
+            $PYTHON_EXE -m pip install --upgrade pip
+            $PYTHON_EXE -m pip install -i https://test.pypi.org kroko-onnx-2
           fi
-
-          $PY_CMD -m pip install --upgrade pip
-          $PY_CMD -m pip install -i https://test.pypi.org/simple/ kroko-onnx-2
 
       - name: Python Import Test
         shell: bash
