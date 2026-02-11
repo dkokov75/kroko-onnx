@@ -27,21 +27,26 @@ jobs:
           pip install -i https://test.pypi.org/simple/ kroko-onnx-2
 
       - name: Python Import Test
+        shell: bash
         run: |
-          # Use the actual module name for the import test
-          python -c "import kroko_onnx; print('SUCCESS: Import successful!')"
+          python -c "import kroko_onnx; print('SUCCESS: kroko_onnx imported successfully')"
 
       - name: Binary Test (Non-Windows)
         if: runner.os != 'Windows'
         run: |
-          # Ensure local bin is in PATH for Linux/macOS
-          export PATH="$PATH:$HOME/.local/bin"
+          export PATH="$PATH:$HOME/.local/bin:/usr/local/bin"
           sherpa-onnx-offline --help | head -n 5
 
       - name: Binary Test (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          # The binary should be available as an .exe in the Scripts folder
+          # 1. Find the Python Scripts folder dynamically
+          $pythonPath = python -c "import sys, os; print(os.path.join(sys.prefix, 'Scripts'))"
+          # 2. Add it to the current session Path
+          $env:Path += ";$pythonPath"
+          
+          echo "Checking path: $pythonPath"
+          
+          # 3. Run the binary. If it fails, the whole job fails (removed continue-on-error)
           sherpa-onnx-offline.exe --help
-        continue-on-error: true
