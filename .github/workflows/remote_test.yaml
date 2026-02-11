@@ -41,7 +41,7 @@ jobs:
         shell: bash
         run: |
           if command -v sherpa-onnx-offline > /dev/null; then
-            kroko-onnx-offline --help | head -n 5
+            sherpa-onnx-offline --help | head -n 5
           else
             echo "⚠️ Binary not found in PATH, checking local bin..."
           fi
