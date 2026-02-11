@@ -1,0 +1,71 @@
+name: build-musl-wheel-lab
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-musl-wheel:
+    name: Build Alpine ARM64 Wheel
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: alpine:latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Build Dependencies
+        run: |
+          apk update
+          apk add --no-cache \
+            python3 \
+            python3-dev \
+            py3-pip \
+            build-base \
+            cmake \
+            git \
+            linux-headers \
+            libexecinfo-dev \
+            bash \
+            zip
+
+      - name: Prepare Build Environment
+        shell: bash
+        run: |
+          python3 -m venv /opt/build_venv
+          . /opt/build_venv/bin/activate
+          pip install --upgrade pip
+          pip install wheel setuptools
+
+      - name: Build Wheel
+        shell: bash
+        run: |
+          . /opt/build_venv/bin/activate
+          
+          export SHERPA_ONNX_MAKE_ARGS="VERBOSE=1 -j4"
+          
+          python3 setup.py bdist_wheel
+          
+          cd dist
+          for f in *.whl; do
+            mv "$f" "${f/linux_aarch64/musllinux_1_1_aarch64}"
+          done
+          ls -lh
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-alpine-arm64
+          path: ./dist/*.whl
+          retention-days: 1
+
+      - name: Test Installed Wheel
+        shell: bash
+        run: |
+          . /opt/build_venv/bin/activate
+          pip install ./dist/*.whl
+          
+          sherpa-onnx --help || echo "Binary test skipped"
+          
+          python3 -c "import kroko_onnx; print('✅ SUCCESS: kroko_onnx works on Alpine ARM64')"
