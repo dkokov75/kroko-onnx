@@ -130,13 +130,13 @@ jobs:
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          echo "🌐 Operating System Details:"
+          echo "Operating System Details:"
           if [ -f /etc/os-release ]; then
             cat /etc/os-release | grep PRETTY_NAME
           fi
-          echo "🏗️ CPU Architecture:"
+          echo "CPU Architecture:"
           uname -m
-          echo "🐍 Python Path:"
+          echo "Python Path:"
           python3 -c "import sys; print(sys.executable)"
       
       - name: Install kroko-onnx-2 (Windows)
