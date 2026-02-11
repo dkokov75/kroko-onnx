@@ -5,8 +5,8 @@ on:
 
 jobs:
   build-musl-wheel:
-    name: Build Alpine ARM64 Wheel
-    runs-on: ubuntu-24.04-arm
+    name: Build Alpine Wheel
+    runs-on: ubuntu-24.04
     container:
       image: alpine:latest
     
