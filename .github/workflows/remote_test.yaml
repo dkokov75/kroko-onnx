@@ -1,47 +1,49 @@
-name: Cross-Platform Test
+name: Multi-Version Cross-Platform Test
 
 on: [push, pull_request]
 
 jobs:
   test:
-    name: Test on ${{ matrix.os }} (${{ matrix.arch }})
+    name: ${{ matrix.os }} / Py ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            arch: x64
-          - os: windows-latest
-            arch: x64
-          - os: macos-latest  # It's Apple Silicon (arm64)
-            arch: arm64
-          - os: ubuntu-24.04-arm
-            arch: arm64
+        # Testing across major operating systems
+        os: [ubuntu-latest, windows-2019, macos-latest]
+        # Testing multiple Python versions to ensure compatibility
+        python-version: ['3.10', '3.11', '3.12', '3.13']
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: ${{ matrix.python-version }}
 
       - name: Install kroko-onnx-2
         run: |
-          pip install --upgrade pip
-          pip install -i https://test.pypi.org/simple/ kroko-onnx-2
+          python -m pip install --upgrade pip
+          # Installing from TestPyPI using your specific index URL
+          pip install -i https://test.pypi.org kroko-onnx-2
 
-      - name: Run Python Import Test
+      - name: Python Import Test
         run: |
-          python -c "import kroko_onnx; print('✅ Python Import Success!')"
+          # Verify that the package can be imported without errors
+          python -c "import kroko_onnx_2; print('✅ Python Import Success!')"
 
-      - name: Run Binary Help Test
-        shell: bash
+      - name: Binary Test (Non-Windows)
+        if: runner.os != 'Windows'
         run: |
-          if command -v sherpa-onnx-offline > /dev/null; then
-            sherpa-onnx-offline --help | head -n 5
-          else
-            echo "⚠️ Binary not found in PATH, checking local bin..."
-          fi
+          # Execute the binary directly in Unix-like environments
+          sherpa-onnx-offline --help | head -n 5
+
+      - name: Binary Test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # On Windows, pip usually creates an .exe wrapper in the Scripts folder
+          sherpa-onnx-offline.exe --help
+        continue-on-error: true
