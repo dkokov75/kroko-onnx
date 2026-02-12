@@ -1,0 +1,67 @@
+name: build-kroko-alpine-binaries
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-bin:
+    name: Alpine x64 Binary Build
+    runs-on: ubuntu-latest
+    container:
+      image: alpine:3.19
+    
+    steps:
+      - name: Install Build Tools
+        run: |
+          apk update
+          apk add --no-cache \
+            build-base cmake git bash \
+            alsa-lib-dev portaudio-dev \
+            linux-headers zlib-dev icu-dev openssl-dev
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply Musl Fixes & Patches
+        shell: bash
+        run: |
+          # 1. СЪЗДАВАНЕ НА FIX ЗА __xstat64 (оправя glibc зависимостта на onnxruntime)
+          cat <<EOF > musl_fix.c
+          #include <sys/stat.h>
+          int __xstat64(int ver, const char * path, struct stat * stat_buf) { 
+              return stat(path, stat_buf); 
+          }
+          EOF
+          gcc -c musl_fix.c -o /tmp/musl_fix.o
+
+          # 2. ПРЕДВАРИТЕЛНО ИЗТЕГЛЯНЕ НА ЗАВИСИМОСТИТЕ
+          mkdir build && cd build
+          cmake .. -DSHERPA_ONNX_ENABLE_PYTHON=OFF || true
+          
+          # 3. ПАЧ ЗА cstdint (оправя int64_t грешката в kaldifst на 18%)
+          find _deps -name "text-utils.h" -exec sed -i '1s/^/#include <cstdint>\n/' {} +
+
+      - name: Compile Kroko-ONNX
+        shell: bash
+        run: |
+          cd build
+          # Използваме същите флагове, които проработиха локално
+          cmake -DCMAKE_BUILD_TYPE=Release \
+                -DSHERPA_ONNX_LINK_LIBSTDCPP_STATICALLY=OFF \
+                -DSHERPA_ONNX_ENABLE_PYTHON=OFF \
+                -DSHERPA_ONNX_ENABLE_WEBSOCKET=ON \
+                -DCMAKE_CXX_FLAGS="-include cstdint" \
+                -DCMAKE_EXE_LINKER_FLAGS="/tmp/musl_fix.o" \
+                ..
+          make -j$(nproc)
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kroko-alpine-binaries
+          path: |
+            build/bin/kroko-onnx-online-websocket-server
+            build/bin/sherpa-onnx-online-websocket-client
+            build/bin/sherpa-onnx
