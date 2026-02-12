@@ -17,7 +17,8 @@ jobs:
           apk add --no-cache \
             nodejs tar gzip bash git build-base cmake \
             python3 python3-dev py3-pip linux-headers \
-            portaudio-dev alsa-lib-dev zlib-dev icu-dev openssl-dev
+            portaudio-dev alsa-lib-dev zlib-dev icu-dev \
+            openssl-dev gcompat
 
       - uses: actions/checkout@v4
         with:
@@ -62,20 +63,29 @@ jobs:
           # Инсталираме инструментите системно в Alpine контейнера
           pip install --upgrade pip setuptools wheel --break-system-packages
 
+
       - name: Build Wheel
         shell: bash
         run: |
-          # РАЗДЕЛЯМЕ ФЛАГОВЕТЕ:
-          # CFLAGS за .c файлове (без cstdint, за да не гърми CMake теста)
+          # Връщаме фикса за __xstat64, но този път го компилираме статично
+          gcc -c /tmp/musl_fix.h -o /tmp/musl_fix.o || true 
+
           export CFLAGS="-include /tmp/musl_fix.h"
-          # CXXFLAGS за .cpp файлове (със cstdint и мусл фикса)
           export CXXFLAGS="-include cstdint -include /tmp/musl_fix.h"
           
-          # Аргументи за CMake, които setup.py ще прехвърли на вътрешния билд
-          export SHERPA_ONNX_CMAKE_ARGS="-DSHERPA_ONNX_LINK_LIBSTDCPP_STATICALLY=OFF -DSHERPA_ONNX_ENABLE_PYTHON=ON -DSHERPA_ONNX_ENABLE_PORTAUDIO=ON"
+          # ОПТИМИЗИРАНИ АРГУМЕНТИ:
+          # 1. Изключваме динамичния ONNX (това е критично!)
+          # 2. Форсираме статично линкване където е възможно
+          export SHERPA_ONNX_CMAKE_ARGS="\
+            -DSHERPA_ONNX_LINK_LIBSTDCPP_STATICALLY=OFF \
+            -DSHERPA_ONNX_ENABLE_PYTHON=ON \
+            -DSHERPA_ONNX_ENABLE_PORTAUDIO=ON \
+            -DSHERPA_ONNX_ENABLE_WEBSOCKET=ON \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DSHERPA_ONNX_USE_PRE_INSTALLED_ONNXRUNTIME_IF_AVAILABLE=OFF"
+          
           export SHERPA_ONNX_MAKE_ARGS="-j$(nproc)"
           
-          # Стартираме същинското създаване на wheel пакета
           python3 setup.py bdist_wheel
 
       - name: Fix Tags & Upload
