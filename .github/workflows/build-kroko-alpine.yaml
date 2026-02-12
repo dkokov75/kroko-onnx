@@ -1,81 +1,81 @@
-name: build-kroko-full-packages
+name: build-kroko-complete-bundle
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-and-package:
-    name: Alpine x64 Full Distribution
+  build-all:
+    name: Full Alpine x64 Build
     runs-on: ubuntu-latest
     container:
       image: alpine:3.19
     
     steps:
-      - name: Install Build Tools
+      - name: Install All Tools
         run: |
           apk update
           apk add --no-cache \
             build-base cmake git bash alsa-lib-dev \
             portaudio-dev linux-headers zlib-dev icu-dev \
-            openssl-dev tar gzip
+            openssl-dev tar gzip python3 python3-dev py3-pip
 
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build Everything
+      - name: Build C++ and Python
         shell: bash
         run: |
-          # 1. Фикс за Musl
-          echo '#include <sys/stat.h>' > musl_fix.c
-          echo 'int __xstat64(int ver, const char * path, struct stat * stat_buf) { return stat(path, stat_buf); }' >> musl_fix.c
-          gcc -c musl_fix.c -o /tmp/musl_fix.o
-
-          # 2. Подготовка и Пач
+          # 1. Musl Fix & Patches
+          echo '#include <sys/stat.h>' > /tmp/musl_fix.h
+          echo 'static inline int __xstat64(int v, const char* p, struct stat* s) { return stat(p, s); }' >> /tmp/musl_fix.h
+          
           mkdir build && cd build
-          cmake .. -DSHERPA_ONNX_ENABLE_PYTHON=OFF -DSHERPA_ONNX_ENABLE_WEBSOCKET=ON || true
+          cmake .. -DSHERPA_ONNX_ENABLE_PYTHON=ON || true
           find _deps -name "text-utils.h" -exec sed -i '1s/^/#include <cstdint>\n/' {} +
           
-          # 3. Компилация на всички цели
-          cmake -DCMAKE_BUILD_TYPE=Release \
-                -DSHERPA_ONNX_LINK_LIBSTDCPP_STATICALLY=OFF \
-                -DCMAKE_CXX_FLAGS="-include cstdint" \
-                -DCMAKE_EXE_LINKER_FLAGS="/tmp/musl_fix.o" ..
+          # 2. Build
+          export CFLAGS="-include /tmp/musl_fix.h"
+          export CXXFLAGS="-include cstdint -include /tmp/musl_fix.h"
+          cmake -DCMAKE_BUILD_TYPE=Release -DSHERPA_ONNX_LINK_LIBSTDCPP_STATICALLY=OFF ..
           make -j$(nproc)
+          
+          # 3. Python Wheel
+          cd ..
+          pip install wheel setuptools --break-system-packages
+          python3 setup.py bdist_wheel
 
-      - name: Prepare Distribution Folder
+      - name: Create APK and TAR.GZ
         shell: bash
         run: |
-          mkdir -p dist/usr/local/bin
-          # Копираме абсолютно всички бинарни файлове, които са се компилирали
-          cp build/bin/* dist/usr/local/bin/
+          # Подготовка на структурата
+          mkdir -p dist/pkg/usr/local/bin
+          cp build/bin/* dist/pkg/usr/local/bin/
           
-          # Генерираме описание на пакета (APK metadata)
-          mkdir -p dist/.PKGINFO
-          cat <<EOF > dist/.PKGINFO
+          # КОРИГИРАНО: .PKGINFO трябва да е ФАЙЛ, а не папка
+          cat <<EOF > dist/pkg/.PKGINFO
           pkgname = kroko-onnx-full
           pkgver = 1.0.0-r0
-          pkgdesc = Complete Kroko ONNX ASR Suite for Alpine
+          pkgdesc = Full Kroko Suite for Alpine
           url = https://github.com
           builddate = $(date +%s)
           packager = GitHub-Actions
-          size = $(du -sb dist/usr | cut -f1)
+          size = $(du -sb dist/pkg/usr | cut -f1)
           arch = x86_64
           depend = alsa-lib portaudio openssl icu-libs zlib libstdc++
           EOF
 
-      - name: Create TAR.GZ and APK
-        shell: bash
-        run: |
-          # 1. Правим TAR.GZ от цялата структура
-          tar -czvf kroko-onnx-full-alpine.tar.gz -C dist usr/
+          # Пакетиране
+          tar -czvf kroko-full-alpine.tar.gz -C dist/pkg usr/
+          tar -C dist/pkg -czvf kroko-onnx-1.0.0-r0.apk .PKGINFO usr/
           
-          # 2. Правим APK пакет
-          tar -C dist -czvf kroko-onnx-full-1.0.0-r0.apk .PKGINFO usr/
+          # Подготовка на Wheel за артефактите
+          mv dist/*.whl . || true
 
-      - name: Upload Final Packages
+      - name: Upload Everything
         uses: actions/upload-artifact@v4
         with:
-          name: kroko-full-distribution
+          name: kroko-complete-distribution
           path: |
             *.tar.gz
             *.apk
+            *.whl
