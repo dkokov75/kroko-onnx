@@ -1,67 +1,87 @@
-name: build-kroko-alpine-binaries
+name: build-kroko-alpine-packages
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-bin:
-    name: Alpine x64 Binary Build
+  build-and-package:
+    name: Alpine x64 Packaging
     runs-on: ubuntu-latest
     container:
       image: alpine:3.19
     
     steps:
-      - name: Install Build Tools
+      - name: Install Build & Packaging Tools
         run: |
           apk update
           apk add --no-cache \
-            build-base cmake git bash \
-            alsa-lib-dev portaudio-dev \
-            linux-headers zlib-dev icu-dev openssl-dev
+            build-base cmake git bash alsa-lib-dev \
+            portaudio-dev linux-headers zlib-dev icu-dev \
+            openssl-dev tar gzip abuild sudo
 
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Apply Musl Fixes & Patches
+      - name: Build Kroko-ONNX
         shell: bash
         run: |
-          # 1. СЪЗДАВАНЕ НА FIX ЗА __xstat64 (оправя glibc зависимостта на onnxruntime)
-          cat <<EOF > musl_fix.c
-          #include <sys/stat.h>
-          int __xstat64(int ver, const char * path, struct stat * stat_buf) { 
-              return stat(path, stat_buf); 
-          }
-          EOF
+          # 1. Musl Fix
+          echo '#include <sys/stat.h>' > musl_fix.c
+          echo 'int __xstat64(int ver, const char * path, struct stat * stat_buf) { return stat(path, stat_buf); }' >> musl_fix.c
           gcc -c musl_fix.c -o /tmp/musl_fix.o
 
-          # 2. ПРЕДВАРИТЕЛНО ИЗТЕГЛЯНЕ НА ЗАВИСИМОСТИТЕ
+          # 2. CMake & Patches
           mkdir build && cd build
           cmake .. -DSHERPA_ONNX_ENABLE_PYTHON=OFF || true
-          
-          # 3. ПАЧ ЗА cstdint (оправя int64_t грешката в kaldifst на 18%)
           find _deps -name "text-utils.h" -exec sed -i '1s/^/#include <cstdint>\n/' {} +
-
-      - name: Compile Kroko-ONNX
-        shell: bash
-        run: |
-          cd build
-          # Използваме същите флагове, които проработиха локално
+          
           cmake -DCMAKE_BUILD_TYPE=Release \
                 -DSHERPA_ONNX_LINK_LIBSTDCPP_STATICALLY=OFF \
                 -DSHERPA_ONNX_ENABLE_PYTHON=OFF \
-                -DSHERPA_ONNX_ENABLE_WEBSOCKET=ON \
                 -DCMAKE_CXX_FLAGS="-include cstdint" \
-                -DCMAKE_EXE_LINKER_FLAGS="/tmp/musl_fix.o" \
-                ..
+                -DCMAKE_EXE_LINKER_FLAGS="/tmp/musl_fix.o" ..
           make -j$(nproc)
+
+      - name: Create TAR.GZ Package
+        shell: bash
+        run: |
+          mkdir -p kroko-onnx-v1.0.0
+          cp build/bin/kroko-onnx-online-websocket-server kroko-onnx-v1.0.0/
+          cp build/bin/sherpa-onnx kroko-onnx-v1.0.0/
+          echo "Копирайте тези файлове в /usr/local/bin на вашата Alpine система." > kroko-onnx-v1.0.0/README.txt
+          tar -czvf kroko-onnx-alpine-x64.tar.gz kroko-onnx-v1.0.0/
+
+      - name: Create APK Package (Manual structure)
+        shell: bash
+        run: |
+          # Създаваме структурата на пакета
+          mkdir -p pkg/usr/local/bin
+          cp build/bin/kroko-onnx-online-websocket-server pkg/usr/local/bin/
+          cp build/bin/sherpa-onnx pkg/usr/local/bin/
+          
+          # Генерираме контролния файл за APK
+          mkdir -p pkg/.PKGINFO
+          cat <<EOF > pkg/.PKGINFO
+          pkgname = kroko-onnx
+          pkgver = 1.0.0-r0
+          pkgdesc = Kroko ONNX ASR for Alpine Musl
+          url = https://github.com
+          builddate = $(date +%s)
+          packager = GitHub-Actions
+          size = $(du -sb pkg/usr | cut -f1)
+          arch = x86_64
+          depend = alsa-lib portaudio openssl icu-libs zlib libstdc++
+          EOF
+          
+          # Пакетираме в .apk (архивиране на структурата)
+          tar -C pkg -czvf kroko-onnx-1.0.0-r0.apk .PKGINFO usr/
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: kroko-alpine-binaries
+          name: kroko-alpine-dist
           path: |
-            build/bin/kroko-onnx-online-websocket-server
-            build/bin/sherpa-onnx-online-websocket-client
-            build/bin/sherpa-onnx
+            *.tar.gz
+            *.apk
