@@ -1,31 +1,31 @@
-name: build-kroko-complete-bundle
+name: build-kroko-alpine-full-dist
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-all:
-    name: Full Alpine x64 Build
+  build-binaries:
+    name: Alpine x64 Full Build
     runs-on: ubuntu-latest
     container:
       image: alpine:3.19
     
     steps:
-      - name: Install All Tools
+      - name: Install Build Tools
         run: |
           apk update
           apk add --no-cache \
             build-base cmake git bash alsa-lib-dev \
             portaudio-dev linux-headers zlib-dev icu-dev \
-            openssl-dev tar gzip python3 python3-dev py3-pip
+            openssl-dev tar gzip
 
-      - name: Checkout
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Apply Fixes
+      - name: Apply Musl Fixes
         shell: bash
         run: |
-          # 1. Musl Fix за __xstat64
+          # 1. Фикс за __xstat64 (за да работи onnxruntime в Alpine)
           cat <<EOF > /tmp/musl_fix.h
           #include <sys/stat.h>
           #ifdef __cplusplus
@@ -37,63 +37,61 @@ jobs:
           #endif
           EOF
 
-          # 2. Глобално инжектиране на cstdint (насила във всички файлове)
-          # Това гарантира, че int32_t ще е наличен навсякъде
+          # 2. Глобално инжектиране на cstdint (за int32_t/int64_t грешките)
           find . -type f \( -name "*.h" -o -name "*.cc" -o -name "*.cpp" \) -exec sed -i '1i #include <cstdint>' {} +
 
-      - name: Build C++ Binaries
+      - name: Build All C++ Binaries
         shell: bash
         run: |
           mkdir build && cd build
-          # Изрично подаваме флаговете тук
+          
           export CFLAGS="-include /tmp/musl_fix.h"
           export CXXFLAGS="-include /tmp/musl_fix.h"
           
+          # Изключваме Python, за да не се чупи билда
           cmake -DCMAKE_BUILD_TYPE=Release \
                 -DSHERPA_ONNX_LINK_LIBSTDCPP_STATICALLY=OFF \
                 -DSHERPA_ONNX_ENABLE_PYTHON=OFF \
                 -DSHERPA_ONNX_ENABLE_WEBSOCKET=ON ..
+          
+          # Пачваме зависимостите, които CMake току-що изтегли
+          find _deps -name "*.h" -exec sed -i '1i #include <cstdint>' {} + || true
+          
           make -j$(nproc)
 
-      - name: Build Python Wheel
+      - name: Create Packages (TAR.GZ and APK)
         shell: bash
         run: |
-          pip install wheel setuptools --break-system-packages
-          # Тук също налагаме флаговете
-          CFLAGS="-include /tmp/musl_fix.h" CXXFLAGS="-include /tmp/musl_fix.h" python3 setup.py bdist_wheel
-
-      - name: Create Packages (.tar.gz and .apk)
-        shell: bash
-        run: |
-          # Създаваме структура за архива
-          mkdir -p bundle/bin
-          cp build/bin/* bundle/bin/
-          tar -czvf kroko-binaries.tar.gz -C bundle bin/
-
-          # Създаваме структура за APK
-          mkdir -p apk_root/usr/local/bin
-          cp build/bin/* apk_root/usr/local/bin/
+          # Подготовка на папката за пакетиране
+          mkdir -p kroko-dist/usr/local/bin
           
-          # Внимателно създаваме .PKGINFO като ФАЙЛ
-          cat <<EOF > apk_root/.PKGINFO
+          # Копираме ВСИЧКО от bin директорията
+          cp build/bin/* kroko-dist/usr/local/bin/
+          
+          # 1. СЪЗДАВАНЕ НА TAR.GZ
+          tar -czvf kroko-onnx-full-alpine-x64.tar.gz -C kroko-dist usr/
+
+          # 2. СЪЗДАВАНЕ НА APK ПАКЕТ
+          # .PKGINFO трябва да е файл в корена на архива
+          cat <<EOF > kroko-dist/.PKGINFO
           pkgname = kroko-onnx-full
           pkgver = 1.0.0-r0
-          pkgdesc = Full Kroko Suite for Alpine
+          pkgdesc = Full Kroko ONNX ASR Suite for Alpine Musl
           url = https://github.com
           builddate = $(date +%s)
           packager = GitHub-Actions
-          size = $(du -sb apk_root/usr | cut -f1)
+          size = $(du -sb kroko-dist/usr | cut -f1)
           arch = x86_64
           depend = alsa-lib portaudio openssl icu-libs zlib libstdc++
           EOF
 
-          tar -C apk_root -czvf kroko-onnx-1.0.0-r0.apk .PKGINFO usr/
+          # Пакетираме .apk файла
+          tar -C kroko-dist -czvf kroko-onnx-full-1.0.0-r0.apk .PKGINFO usr/
 
-      - name: Upload Artifacts
+      - name: Upload Final Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: kroko-final-dist
+          name: kroko-full-dist-alpine
           path: |
             *.tar.gz
             *.apk
-            dist/*.whl
