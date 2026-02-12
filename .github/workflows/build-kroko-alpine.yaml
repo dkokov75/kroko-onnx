@@ -1,87 +1,81 @@
-name: build-kroko-alpine-packages
+name: build-kroko-full-packages
 
 on:
   workflow_dispatch:
 
 jobs:
   build-and-package:
-    name: Alpine x64 Packaging
+    name: Alpine x64 Full Distribution
     runs-on: ubuntu-latest
     container:
       image: alpine:3.19
     
     steps:
-      - name: Install Build & Packaging Tools
+      - name: Install Build Tools
         run: |
           apk update
           apk add --no-cache \
             build-base cmake git bash alsa-lib-dev \
             portaudio-dev linux-headers zlib-dev icu-dev \
-            openssl-dev tar gzip abuild sudo
+            openssl-dev tar gzip
 
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Build Kroko-ONNX
+      - name: Build Everything
         shell: bash
         run: |
-          # 1. Musl Fix
+          # 1. Фикс за Musl
           echo '#include <sys/stat.h>' > musl_fix.c
           echo 'int __xstat64(int ver, const char * path, struct stat * stat_buf) { return stat(path, stat_buf); }' >> musl_fix.c
           gcc -c musl_fix.c -o /tmp/musl_fix.o
 
-          # 2. CMake & Patches
+          # 2. Подготовка и Пач
           mkdir build && cd build
-          cmake .. -DSHERPA_ONNX_ENABLE_PYTHON=OFF || true
+          cmake .. -DSHERPA_ONNX_ENABLE_PYTHON=OFF -DSHERPA_ONNX_ENABLE_WEBSOCKET=ON || true
           find _deps -name "text-utils.h" -exec sed -i '1s/^/#include <cstdint>\n/' {} +
           
+          # 3. Компилация на всички цели
           cmake -DCMAKE_BUILD_TYPE=Release \
                 -DSHERPA_ONNX_LINK_LIBSTDCPP_STATICALLY=OFF \
-                -DSHERPA_ONNX_ENABLE_PYTHON=OFF \
                 -DCMAKE_CXX_FLAGS="-include cstdint" \
                 -DCMAKE_EXE_LINKER_FLAGS="/tmp/musl_fix.o" ..
           make -j$(nproc)
 
-      - name: Create TAR.GZ Package
+      - name: Prepare Distribution Folder
         shell: bash
         run: |
-          mkdir -p kroko-onnx-v1.0.0
-          cp build/bin/kroko-onnx-online-websocket-server kroko-onnx-v1.0.0/
-          cp build/bin/sherpa-onnx kroko-onnx-v1.0.0/
-          echo "Копирайте тези файлове в /usr/local/bin на вашата Alpine система." > kroko-onnx-v1.0.0/README.txt
-          tar -czvf kroko-onnx-alpine-x64.tar.gz kroko-onnx-v1.0.0/
-
-      - name: Create APK Package (Manual structure)
-        shell: bash
-        run: |
-          # Създаваме структурата на пакета
-          mkdir -p pkg/usr/local/bin
-          cp build/bin/kroko-onnx-online-websocket-server pkg/usr/local/bin/
-          cp build/bin/sherpa-onnx pkg/usr/local/bin/
+          mkdir -p dist/usr/local/bin
+          # Копираме абсолютно всички бинарни файлове, които са се компилирали
+          cp build/bin/* dist/usr/local/bin/
           
-          # Генерираме контролния файл за APK
-          mkdir -p pkg/.PKGINFO
-          cat <<EOF > pkg/.PKGINFO
-          pkgname = kroko-onnx
+          # Генерираме описание на пакета (APK metadata)
+          mkdir -p dist/.PKGINFO
+          cat <<EOF > dist/.PKGINFO
+          pkgname = kroko-onnx-full
           pkgver = 1.0.0-r0
-          pkgdesc = Kroko ONNX ASR for Alpine Musl
+          pkgdesc = Complete Kroko ONNX ASR Suite for Alpine
           url = https://github.com
           builddate = $(date +%s)
           packager = GitHub-Actions
-          size = $(du -sb pkg/usr | cut -f1)
+          size = $(du -sb dist/usr | cut -f1)
           arch = x86_64
           depend = alsa-lib portaudio openssl icu-libs zlib libstdc++
           EOF
-          
-          # Пакетираме в .apk (архивиране на структурата)
-          tar -C pkg -czvf kroko-onnx-1.0.0-r0.apk .PKGINFO usr/
 
-      - name: Upload Artifacts
+      - name: Create TAR.GZ and APK
+        shell: bash
+        run: |
+          # 1. Правим TAR.GZ от цялата структура
+          tar -czvf kroko-onnx-full-alpine.tar.gz -C dist usr/
+          
+          # 2. Правим APK пакет
+          tar -C dist -czvf kroko-onnx-full-1.0.0-r0.apk .PKGINFO usr/
+
+      - name: Upload Final Packages
         uses: actions/upload-artifact@v4
         with:
-          name: kroko-alpine-dist
+          name: kroko-full-distribution
           path: |
             *.tar.gz
             *.apk
