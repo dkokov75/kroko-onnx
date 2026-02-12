@@ -22,14 +22,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Apply Hard Patches
+      - name: Apply Fixes
         shell: bash
         run: |
-          # 1. Глобално инжектиране на <cstdint> във всички критични файлове
-          # Това решава проблема с int32_t/int64_t веднъж завинаги
-          find . -name "*.h" -o -name "*.cc" -o -name "*.cpp" | x86_64-alpine-linux-musl-grep -l "int32_t\|int64_t" | xargs sed -i '1i #include <cstdint>' || true
-
-          # 2. Musl Fix за __xstat64
+          # 1. Musl Fix за __xstat64
           cat <<EOF > /tmp/musl_fix.h
           #include <sys/stat.h>
           #ifdef __cplusplus
@@ -41,58 +37,63 @@ jobs:
           #endif
           EOF
 
-      - name: Build C++ and Python
+          # 2. Глобално инжектиране на cstdint (насила във всички файлове)
+          # Това гарантира, че int32_t ще е наличен навсякъде
+          find . -type f \( -name "*.h" -o -name "*.cc" -o -name "*.cpp" \) -exec sed -i '1i #include <cstdint>' {} +
+
+      - name: Build C++ Binaries
         shell: bash
         run: |
-          # Подготовка на зависимостите (за да пачнем и тях)
           mkdir build && cd build
-          cmake .. -DSHERPA_ONNX_ENABLE_PYTHON=ON || true
-          find _deps -name "*.h" | xargs sed -i '1i #include <cstdint>' || true
-          
-          # Основна компилация
+          # Изрично подаваме флаговете тук
           export CFLAGS="-include /tmp/musl_fix.h"
           export CXXFLAGS="-include /tmp/musl_fix.h"
+          
           cmake -DCMAKE_BUILD_TYPE=Release \
                 -DSHERPA_ONNX_LINK_LIBSTDCPP_STATICALLY=OFF \
-                -DSHERPA_ONNX_ENABLE_PYTHON=ON \
+                -DSHERPA_ONNX_ENABLE_PYTHON=OFF \
                 -DSHERPA_ONNX_ENABLE_WEBSOCKET=ON ..
           make -j$(nproc)
-          
-          # Python Wheel
-          cd ..
-          pip install wheel setuptools --break-system-packages
-          # Подаваме флаговете и тук за всеки случай
-          CFLAGS="-include /tmp/musl_fix.h" CXXFLAGS="-include /tmp/musl_fix.h" python3 setup.py bdist_wheel
 
-      - name: Create APK and TAR.GZ
+      - name: Build Python Wheel
         shell: bash
         run: |
-          mkdir -p dist/pkg/usr/local/bin
-          cp build/bin/* dist/pkg/usr/local/bin/ || true
+          pip install wheel setuptools --break-system-packages
+          # Тук също налагаме флаговете
+          CFLAGS="-include /tmp/musl_fix.h" CXXFLAGS="-include /tmp/musl_fix.h" python3 setup.py bdist_wheel
+
+      - name: Create Packages (.tar.gz and .apk)
+        shell: bash
+        run: |
+          # Създаваме структура за архива
+          mkdir -p bundle/bin
+          cp build/bin/* bundle/bin/
+          tar -czvf kroko-binaries.tar.gz -C bundle bin/
+
+          # Създаваме структура за APK
+          mkdir -p apk_root/usr/local/bin
+          cp build/bin/* apk_root/usr/local/bin/
           
-          # Описание на APK пакета
-          cat <<EOF > dist/pkg/.PKGINFO
+          # Внимателно създаваме .PKGINFO като ФАЙЛ
+          cat <<EOF > apk_root/.PKGINFO
           pkgname = kroko-onnx-full
           pkgver = 1.0.0-r0
           pkgdesc = Full Kroko Suite for Alpine
           url = https://github.com
           builddate = $(date +%s)
           packager = GitHub-Actions
-          size = $(du -sb dist/pkg/usr | cut -f1)
+          size = $(du -sb apk_root/usr | cut -f1)
           arch = x86_64
           depend = alsa-lib portaudio openssl icu-libs zlib libstdc++
           EOF
 
-          # Създаване на архивите
-          tar -czvf kroko-full-alpine.tar.gz -C dist/pkg usr/
-          tar -C dist/pkg -czvf kroko-onnx-1.0.0-r0.apk .PKGINFO usr/
-          mv dist/*.whl . || true
+          tar -C apk_root -czvf kroko-onnx-1.0.0-r0.apk .PKGINFO usr/
 
-      - name: Upload Everything
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: kroko-complete-distribution
+          name: kroko-final-dist
           path: |
             *.tar.gz
             *.apk
-            *.whl
+            dist/*.whl
