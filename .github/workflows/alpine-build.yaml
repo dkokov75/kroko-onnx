@@ -8,47 +8,65 @@ jobs:
     name: Alpine x64 Build
     runs-on: ubuntu-latest
     container:
-      image: alpine:latest
+      image: alpine:3.19 # Използваме фиксирана версия за стабилност
     
     steps:
-      # 1. Critical: Install nodejs and tools BEFORE checkout
       - name: Install System Bootstraps
         run: |
           apk update
           apk add --no-cache \
             nodejs tar gzip bash git build-base cmake \
             python3 python3-dev py3-pip linux-headers \
-            portaudio-dev alsa-lib-dev
+            portaudio-dev alsa-lib-dev zlib-dev icu-dev openssl-dev
 
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Configure Git Safe Directory
-        run: |
-          git config --global --add safe.directory /__w/kroko-onnx/kroko-onnx
+        run: git config --global --add safe.directory /__w/kroko-onnx/kroko-onnx
 
       - name: Update version
-        shell: bash
         run: |
           chmod +x new-release.sh
           ./new-release.sh
 
       - name: Prepare Python Build Tools
-        shell: bash
         run: |
           python3 -m venv /opt/venv
           . /opt/venv/bin/activate
           pip install --upgrade pip setuptools wheel
 
+      - name: Apply Musl Patches
+        shell: bash
+        run: |
+          # 1. СЪЗДАВАНЕ НА FIX ЗА __xstat64
+          echo '#include <sys/stat.h>' > musl_fix.c
+          echo 'int __xstat64(int ver, const char * path, struct stat * stat_buf) { return stat(path, stat_buf); }' >> musl_fix.c
+          gcc -c musl_fix.c -o /tmp/musl_fix.o
+
+          # 2. ПРЕДВАРИТЕЛНО ИЗТЕГЛЯНЕ НА ЗАВИСИМОСТИТЕ (за да можем да ги пачнеm)
+          mkdir temp_cmake && cd temp_cmake
+          cmake .. -DSHERPA_ONNX_ENABLE_PYTHON=ON || true
+          
+          # 3. ПАЧ ЗА cstdint (kaldifst)
+          find _deps -name "text-utils.h" -exec sed -i '1s/^/#include <cstdint>\n/' {} +
+          cd .. && rm -rf temp_cmake
+
       - name: Build Wheel
         shell: bash
         run: |
           . /opt/venv/bin/activate
-          # Explicitly set C++ flags for musl compatibility if needed
-          export CFLAGS="-D_GNU_SOURCE"
-          export CXXFLAGS="-D_GNU_SOURCE"
-          export SHERPA_ONNX_MAKE_ARGS="-j$(nproc) VERBOSE=1"
+          
+          # ПРЕДАВАМЕ ФЛАГОВЕТЕ КЪМ CMAKE ЧРЕЗ SETUP.PY
+          # Добавяме -include cstdint и линкваме musl_fix.o
+          export CFLAGS="-include cstdint"
+          export CXXFLAGS="-include cstdint"
+          export LDFLAGS="/tmp/musl_fix.o"
+          
+          # Аргументи за CMake, които setup.py ще използва
+          export SHERPA_ONNX_CMAKE_ARGS="-DSHERPA_ONNX_LINK_LIBSTDCPP_STATICALLY=OFF -DCMAKE_EXE_LINKER_FLAGS=/tmp/musl_fix.o"
+          export SHERPA_ONNX_MAKE_ARGS="-j$(nproc)"
           
           python3 setup.py bdist_wheel
 
@@ -56,8 +74,8 @@ jobs:
         shell: bash
         run: |
           cd dist
-          # Rename to musllinux so pip knows it's for Alpine
-          for f in *linux_x86_64.whl; do
+          # Важно: PEP 600 - преименуваме на musllinux_1_1 (съвместим с Alpine)
+          for f in *.whl; do
             mv "$f" "${f/linux_x86_64/musllinux_1_1_x86_64}"
           done
           ls -lh
