@@ -86,16 +86,52 @@ jobs:
             container: "fedora:40"
             python-version: '3.10'
             name: "Fedora 40"
+          - os: ubuntu-latest
+            container: "fedora:40"
+            python-version: '3.11'
+            name: "Fedora 40"
+          - os: ubuntu-latest
+            container: "fedora:40"
+            python-version: '3.12'
+            name: "Fedora 40"
+          - os: ubuntu-latest
+            container: "fedora:40"
+            python-version: '3.13'
+            name: "Fedora 40" 
             
           - os: ubuntu-latest
             container: "amazonlinux:2023"
             python-version: '3.10'
             name: "Amazon Linux 2023"
-            
+          - os: ubuntu-latest
+            container: "amazonlinux:2023"
+            python-version: '3.11'
+            name: "Amazon Linux 2023"
+          - os: ubuntu-latest
+            container: "amazonlinux:2023"
+            python-version: '3.12'
+            name: "Amazon Linux 2023"
+          - os: ubuntu-latest
+            container: "amazonlinux:2023"
+            python-version: '3.13'
+            name: "Amazon Linux 2023"
+          
           - os: ubuntu-latest
             container: "archlinux:latest"
             python-version: '3.10'
             name: "Arch Linux"
+          - os: ubuntu-latest
+            container: "archlinux:latest"
+            python-version: '3.11'
+            name: "Arch Linux"
+          - os: ubuntu-latest
+            container: "archlinux:latest"
+            python-version: '3.12'
+            name: "Arch Linux"
+          - os: ubuntu-latest
+            container: "archlinux:latest"
+            python-version: '3.13'
+            name: "Arch Linux"            
           
     steps:
       - name: Install tar for Amazon Linux
